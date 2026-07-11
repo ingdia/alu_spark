@@ -2,21 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 
-// --- Auth Screens ---
+// ==========================================
+// Auth Screens
+// ==========================================
 import 'package:alu_spark/features/auth/presentation/screens/splash_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/onboarding_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/login_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/register_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/otp_verification_screen.dart';
 
-// --- Home & Core Navigation ---
+// ==========================================
+// Home & Core Navigation
+// ==========================================
 import 'package:alu_spark/features/home/presentation/screens/home_shell.dart';
 
-// --- Opportunities ---
+// ==========================================
+// Opportunities
+// ==========================================
 import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 import 'package:alu_spark/features/opportunities/presentation/screens/discover_screen.dart';
 import 'package:alu_spark/features/opportunities/presentation/screens/search_screen.dart';
 import 'package:alu_spark/features/opportunities/presentation/screens/opportunity_detail_screen.dart';
+import 'package:alu_spark/features/opportunities/presentation/screens/post_opportunity_screen.dart';
+
+// ==========================================
+// Student Profile
+// ==========================================
+import 'package:alu_spark/features/student_profile/presentation/screens/student_profile_screen.dart';
 
 class RouteNames {
   // Auth & Onboarding
@@ -28,11 +40,11 @@ class RouteNames {
   
   // Core Navigation
   static const String home = '/home';
+  
+  // Opportunities
   static const String discover = '/discover';
   static const String search = '/search';
   static const String postOpportunity = '/post-opportunity';
-  
-  // Opportunities
   static const String opportunityDetail = '/opportunity-detail';
   
   // Profiles
@@ -66,33 +78,43 @@ class AppRouter {
       // ==========================================
       case RouteNames.splash:
         return MaterialPageRoute(builder: (_) => const SplashScreen());
+        
       case RouteNames.onboarding:
         return MaterialPageRoute(builder: (_) => const OnboardingScreen());
+        
       case RouteNames.login:
         return MaterialPageRoute(builder: (_) => const LoginScreen());
+        
       case RouteNames.register:
         return MaterialPageRoute(builder: (_) => const RegisterScreen());
+        
       case RouteNames.otpVerification:
-        return MaterialPageRoute(builder: (_) => const OtpVerificationScreen(email: 'student@alu.ac.ke'));
+        return MaterialPageRoute(builder: (_) => const OtpVerificationScreen());
+        
       case RouteNames.home:
         return MaterialPageRoute(builder: (_) => const HomeShell());
+        
       case RouteNames.discover:
         return MaterialPageRoute(builder: (_) => const DiscoverScreen());
+        
       case RouteNames.search:
         return MaterialPageRoute(builder: (_) => const SearchScreen());
+        
+      case RouteNames.postOpportunity:
+        return MaterialPageRoute(builder: (_) => const PostOpportunityScreen());
+        
       case RouteNames.opportunityDetail:
         final opportunity = settings.arguments as Opportunity;
         return MaterialPageRoute(
           builder: (_) => OpportunityDetailScreen(opportunity: opportunity),
         );
+        
+      case RouteNames.studentProfile:
+        return MaterialPageRoute(builder: (_) => const StudentProfileScreen());
 
       // ==========================================
-      // --- Placeholder Routes ---
+      // --- Placeholder Routes (Upcoming Commits) ---
       // ==========================================
-      case RouteNames.postOpportunity:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Post Opportunity'));
-      case RouteNames.studentProfile:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Student Profile'));
       case RouteNames.studentProfileEdit:
         return MaterialPageRoute(builder: (_) => _placeholderScreen('Student Profile Edit'));
       case RouteNames.startupProfile:
