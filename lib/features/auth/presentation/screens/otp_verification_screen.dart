@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/glassmorphism_container.dart';
+import 'package:alu_spark/features/home/presentation/screens/home_shell.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String email;
@@ -128,7 +129,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                         ),
                         child: ElevatedButton(
                           onPressed: () {
-                            // Placeholder: Verify OTP and navigate to Home/Dashboard
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(builder: (_) => const HomeShell()),
+                              (route) => false,
+                            );
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
