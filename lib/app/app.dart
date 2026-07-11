@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
-import 'theme/app_theme.dart';
-
-// Import your HomeShell (adjust the path based on where you saved it)
-import '../features/home/presentation/screens/home_shell.dart'; 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:alu_spark/app/router/app_router.dart';
+import 'package:alu_spark/app/theme/app_theme.dart';
 
 class ALUSparkApp extends StatelessWidget {
   const ALUSparkApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ALU Spark',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      home: const HomeShell(), // Point to your awesome HomeShell!
+    return ProviderScope(
+      child: MaterialApp(
+        title: 'ALU Spark',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.darkTheme,
+        initialRoute: RouteNames.splash,
+        onGenerateRoute: AppRouter.generateRoute,
+      ),
     );
   }
 }

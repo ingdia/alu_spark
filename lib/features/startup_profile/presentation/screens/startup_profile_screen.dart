@@ -4,26 +4,26 @@ import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 
-class StudentProfileScreen extends ConsumerWidget {
-  const StudentProfileScreen({super.key});
+class StartupProfileScreen extends ConsumerWidget {
+  const StartupProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Dummy data
-    const String name = 'Alex Johnson';
-    const String university = 'African Leadership University';
-    const String major = 'Software Engineering';
-    const String bio = 'Passionate software engineering student with a keen interest in mobile development and UI/UX design. Always eager to learn new technologies and contribute to impactful projects.';
+    const String startupName = 'TechStart';
+    const String tagline = 'Empowering students through technology';
+    const String industry = 'EdTech';
+    const String description = 'TechStart is a student-led startup focused on building innovative educational tools. We aim to bridge the gap between academic learning and industry requirements by providing real-world project experience and mentorship.';
     
-    final List<String> skills = ['Flutter', 'Dart', 'Python', 'UI/UX Design', 'Firebase', 'Git'];
-    
-    final List<Map<String, String>> education = [
-      {'degree': 'BSc in Software Engineering', 'institution': 'African Leadership University', 'period': '2023 - 2027'},
+    final List<Map<String, String>> teamMembers = [
+      {'name': 'John Doe', 'role': 'CEO & Founder'},
+      {'name': 'Jane Smith', 'role': 'CTO'},
+      {'name': 'Alice Brown', 'role': 'Lead Designer'},
     ];
-    
-    final List<Map<String, String>> experience = [
-      {'role': 'UI/UX Design Intern', 'company': 'TechStart', 'period': 'Jun 2025 - Present'},
-      {'role': 'Frontend Developer', 'company': 'DesignHub', 'period': 'Jan 2025 - May 2025'},
+
+    final List<Map<String, String>> openRoles = [
+      {'title': 'Frontend Developer', 'type': 'Internship'},
+      {'title': 'Marketing Specialist', 'type': 'Part-time'},
     ];
 
     return Scaffold(
@@ -31,7 +31,7 @@ class StudentProfileScreen extends ConsumerWidget {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 220,
+            expandedHeight: 240,
             floating: false,
             pinned: true,
             backgroundColor: AppColors.darkBlue,
@@ -41,9 +41,9 @@ class StudentProfileScreen extends ConsumerWidget {
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.settings_outlined, color: AppColors.white),
+                icon: const Icon(Icons.share_outlined, color: AppColors.white),
                 onPressed: () {
-                  // TODO: Navigate to settings
+                  // TODO: Share startup profile
                 },
               ),
             ],
@@ -54,7 +54,7 @@ class StudentProfileScreen extends ConsumerWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      AppColors.darkRed.withOpacity(0.4),
+                      AppColors.darkBlueLight,
                       AppColors.darkBlue,
                     ],
                   ),
@@ -64,20 +64,37 @@ class StudentProfileScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const SizedBox(height: 40),
-                      CircleAvatar(
-                        radius: 45,
-                        backgroundColor: AppColors.glassWhite,
-                        child: const Icon(Icons.person, size: 45, color: AppColors.white),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.glassWhite,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.borderGlass),
+                        ),
+                        child: const Icon(Icons.business, size: 45, color: AppColors.darkRed),
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        name,
+                        startupName,
                         style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '$major • $university',
+                        tagline,
                         style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white.withOpacity(0.8)),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.darkRed.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.darkRed),
+                        ),
+                        child: Text(
+                          industry,
+                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed),
+                        ),
                       ),
                     ],
                   ),
@@ -93,21 +110,17 @@ class StudentProfileScreen extends ConsumerWidget {
                 children: [
                   _buildQuickStats(),
                   const SizedBox(height: 24),
-                  _buildSectionTitle('About Me'),
+                  _buildSectionTitle('About Us'),
                   const SizedBox(height: 12),
-                  _buildAboutSection(bio),
+                  _buildAboutSection(description),
                   const SizedBox(height: 24),
-                  _buildSectionTitle('Skills'),
+                  _buildSectionTitle('Open Opportunities'),
                   const SizedBox(height: 12),
-                  _buildSkillsSection(skills),
+                  _buildOpenRoles(openRoles),
                   const SizedBox(height: 24),
-                  _buildSectionTitle('Education'),
+                  _buildSectionTitle('Our Team'),
                   const SizedBox(height: 12),
-                  _buildEducationSection(education),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle('Experience'),
-                  const SizedBox(height: 12),
-                  _buildExperienceSection(experience),
+                  _buildTeamMembers(teamMembers),
                   const SizedBox(height: 80), // Space for FAB
                 ],
               ),
@@ -117,7 +130,7 @@ class StudentProfileScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          // TODO: Navigate to edit profile
+          // TODO: Navigate to edit startup profile
         },
         backgroundColor: AppColors.darkRed,
         icon: const Icon(Icons.edit, color: AppColors.white),
@@ -133,11 +146,11 @@ class StudentProfileScreen extends ConsumerWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _buildStatItem('GPA', '3.8'),
+        _buildStatItem('Team', '12'),
         const SizedBox(width: 12),
-        _buildStatItem('Projects', '12'),
+        _buildStatItem('Founded', '2023'),
         const SizedBox(width: 12),
-        _buildStatItem('Skills', '6'),
+        _buildStatItem('Open Roles', '4'),
       ],
     );
   }
@@ -172,13 +185,13 @@ class StudentProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAboutSection(String bio) {
+  Widget _buildAboutSection(String description) {
     return GlassmorphicContainer(
       blur: 10,
       borderRadius: 16,
       padding: const EdgeInsets.all(16),
       child: Text(
-        bio,
+        description,
         style: AppTextStyles.bodyMedium.copyWith(
           color: AppColors.textSecondary,
           height: 1.5,
@@ -187,82 +200,9 @@ class StudentProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSkillsSection(List<String> skills) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: skills.map((skill) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: AppColors.glassWhite,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.borderGlass),
-          ),
-          child: Text(
-            skill,
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildEducationSection(List<Map<String, String>> education) {
+  Widget _buildOpenRoles(List<Map<String, String>> roles) {
     return Column(
-      children: education.map((edu) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: GlassmorphicContainer(
-            blur: 10,
-            borderRadius: 16,
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.darkRed.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.school_outlined, color: AppColors.darkRed, size: 24),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        edu['degree']!,
-                        style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        edu['institution']!,
-                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        edu['period']!,
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildExperienceSection(List<Map<String, String>> experience) {
-    return Column(
-      children: experience.map((exp) {
+      children: roles.map((role) {
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: GlassmorphicContainer(
@@ -285,21 +225,56 @@ class StudentProfileScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        exp['role']!,
+                        role['title']!,
                         style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        exp['company']!,
+                        role['type']!,
                         style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                       ),
-                      const SizedBox(height: 4),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios, color: AppColors.textSecondary, size: 16),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildTeamMembers(List<Map<String, String>> members) {
+    return Column(
+      children: members.map((member) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: GlassmorphicContainer(
+            blur: 10,
+            borderRadius: 16,
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: AppColors.darkRed.withOpacity(0.2),
+                  child: Text(
+                    member['name']!.substring(0, 1),
+                    style: AppTextStyles.bodyLarge.copyWith(color: AppColors.darkRed),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        exp['period']!,
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                        ),
+                        member['name']!,
+                        style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
+                      ),
+                      Text(
+                        member['role']!,
+                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                       ),
                     ],
                   ),
