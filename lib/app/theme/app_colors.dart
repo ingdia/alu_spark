@@ -15,8 +15,7 @@ class AppColors {
   static const Color glassWhite = Color(0x1AFFFFFF); // 10% opacity
   static const Color borderGlass = Color(0x33FFFFFF); // 20% opacity
 
-  // Text
-  static const Color textPrimary = Color(0xFFFFFFFF);
+  static const Color lightGray = Color(0xFFCBD5E1); = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFF94A3B8);
 
   // Gradients
