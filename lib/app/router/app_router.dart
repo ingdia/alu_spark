@@ -31,6 +31,11 @@ import 'package:alu_spark/features/opportunities/presentation/screens/post_oppor
 import 'package:alu_spark/features/student_profile/presentation/screens/student_profile_screen.dart';
 import 'package:alu_spark/features/student_profile/presentation/screens/student_profile_edit_screen.dart';
 
+// ==========================================
+// Startup Profile
+// ==========================================
+import 'package:alu_spark/features/startup_profile/presentation/screens/startup_profile_screen.dart';
+
 class RouteNames {
   // Auth & Onboarding
   static const String splash = '/splash';
@@ -115,12 +120,13 @@ class AppRouter {
         
       case RouteNames.studentProfileEdit:
         return MaterialPageRoute(builder: (_) => const StudentProfileEditScreen());
+        
+      case RouteNames.startupProfile:
+        return MaterialPageRoute(builder: (_) => const StartupProfileScreen());
 
       // ==========================================
       // --- Placeholder Routes (Upcoming Commits) ---
       // ==========================================
-      case RouteNames.startupProfile:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Startup Profile'));
       case RouteNames.startupProfileEdit:
         return MaterialPageRoute(builder: (_) => _placeholderScreen('Startup Profile Edit'));
       case RouteNames.applyOpportunity:
