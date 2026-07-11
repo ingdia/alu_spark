@@ -13,7 +13,7 @@ import 'package:alu_spark/app/app.dart';
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const AluSparkApp());
+    await tester.pumpWidget(const ALUSparkApp());
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);
