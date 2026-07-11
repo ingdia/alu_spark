@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/glassmorphism_container.dart';
+import '../../../../core/providers/role_provider.dart';
+import '../../../../shared/enums/user_role.dart';
 import 'package:alu_spark/features/home/presentation/screens/home_shell.dart';
 import 'register_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  UserRole _selectedRole = UserRole.student;
 
   @override
   void dispose() {
@@ -70,7 +74,33 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text('Welcome Back', style: AppTextStyles.headingLarge),
                   const SizedBox(height: 8),
                   Text('Sign in to continue your journey', style: AppTextStyles.bodyMedium),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 24),
+                  // Role Selector
+                  Row(
+                    children: [
+                      _RoleChip(
+                        label: 'Student',
+                        icon: Icons.school_outlined,
+                        isSelected: _selectedRole == UserRole.student,
+                        onTap: () => setState(() => _selectedRole = UserRole.student),
+                      ),
+                      const SizedBox(width: 10),
+                      _RoleChip(
+                        label: 'Founder',
+                        icon: Icons.rocket_launch_outlined,
+                        isSelected: _selectedRole == UserRole.founder,
+                        onTap: () => setState(() => _selectedRole = UserRole.founder),
+                      ),
+                      const SizedBox(width: 10),
+                      _RoleChip(
+                        label: 'Admin',
+                        icon: Icons.admin_panel_settings_outlined,
+                        isSelected: _selectedRole == UserRole.admin,
+                        onTap: () => setState(() => _selectedRole = UserRole.admin),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
 
                   // Glassmorphic Login Card
                   GlassmorphicContainer(
@@ -130,6 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           child: ElevatedButton(
                             onPressed: () {
+                              ref.read(roleProvider.notifier).setRole(_selectedRole);
                               Navigator.pushAndRemoveUntil(
                                 context,
                                 MaterialPageRoute(builder: (_) => const HomeShell()),
@@ -177,6 +208,47 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoleChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _RoleChip({required this.label, required this.icon, required this.isSelected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.darkRed.withOpacity(0.2) : AppColors.glassWhite,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: isSelected ? AppColors.darkRed : AppColors.borderGlass, width: 1.5),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: isSelected ? AppColors.darkRed : AppColors.textSecondary, size: 22),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: isSelected ? AppColors.white : AppColors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ],
           ),
         ),
       ),
