@@ -29,6 +29,7 @@ import 'package:alu_spark/features/opportunities/presentation/screens/post_oppor
 // Student Profile
 // ==========================================
 import 'package:alu_spark/features/student_profile/presentation/screens/student_profile_screen.dart';
+import 'package:alu_spark/features/student_profile/presentation/screens/student_profile_edit_screen.dart';
 
 class RouteNames {
   // Auth & Onboarding
@@ -111,12 +112,13 @@ class AppRouter {
         
       case RouteNames.studentProfile:
         return MaterialPageRoute(builder: (_) => const StudentProfileScreen());
+        
+      case RouteNames.studentProfileEdit:
+        return MaterialPageRoute(builder: (_) => const StudentProfileEditScreen());
 
       // ==========================================
       // --- Placeholder Routes (Upcoming Commits) ---
       // ==========================================
-      case RouteNames.studentProfileEdit:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Student Profile Edit'));
       case RouteNames.startupProfile:
         return MaterialPageRoute(builder: (_) => _placeholderScreen('Startup Profile'));
       case RouteNames.startupProfileEdit:
