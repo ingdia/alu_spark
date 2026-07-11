@@ -4,6 +4,7 @@ import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/core/constants/dummy_data.dart';
+import 'package:alu_spark/core/utils/responsive_utils.dart';
 import 'package:alu_spark/features/opportunities/presentation/widgets/opportunity_card.dart';
 
 class StudentHomeScreen extends ConsumerWidget {
@@ -11,54 +12,69 @@ class StudentHomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final horizontalPadding = ResponsiveUtils.getResponsivePadding(context);
+    
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 24),
-              _buildQuickStats(),
-              const SizedBox(height: 32),
-              _buildSectionHeader('Recommended for You'),
-              const SizedBox(height: 16),
-              _buildRecommendedOpportunities(),
-              const SizedBox(height: 32),
-              _buildSectionHeader('Your Applications'),
-              const SizedBox(height: 16),
-              _buildApplicationStatus(),
-              const SizedBox(height: 20),
-            ],
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 20),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: ResponsiveUtils.getMaxContentWidth(context),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(context),
+                  const SizedBox(height: 24),
+                  _buildQuickStats(context),
+                  const SizedBox(height: 32),
+                  _buildSectionHeader(context, 'Recommended for You'),
+                  const SizedBox(height: 16),
+                  _buildRecommendedOpportunities(context),
+                  const SizedBox(height: 32),
+                  _buildSectionHeader(context, 'Your Applications'),
+                  const SizedBox(height: 16),
+                  _buildApplicationStatus(context),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final titleSize = ResponsiveUtils.getResponsiveFontSize(context, 24);
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Good morning, Alex 👋',
-              style: AppTextStyles.headingMedium.copyWith(
-                color: AppColors.white,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Good morning, Alex 👋',
+                style: AppTextStyles.headingMedium.copyWith(
+                  color: AppColors.white,
+                  fontSize: titleSize,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Find your next opportunity',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+              const SizedBox(height: 4),
+              Text(
+                'Find your next opportunity',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: ResponsiveUtils.getResponsiveFontSize(context, 14),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         GestureDetector(
           onTap: () {
@@ -82,52 +98,67 @@ class StudentHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickStats() {
+  Widget _buildQuickStats(BuildContext context) {
+    final isMobile = ResponsiveUtils.isMobile(context);
+    final spacing = ResponsiveUtils.getResponsiveSpacing(context, 8);
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _buildStatCard('Applied', '5', Icons.send_outlined),
-        _buildStatCard('Bookmarks', '12', Icons.bookmark_border),
-        _buildStatCard('Interviews', '2', Icons.calendar_today_outlined),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: spacing / 2),
+            child: _buildStatCard('Applied', '5', Icons.send_outlined),
+          ),
+        ),
+        if (isMobile) ...[
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: spacing / 2),
+              child: _buildStatCard('Bookmarks', '12', Icons.bookmark_border),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: spacing / 2),
+              child: _buildStatCard('Interviews', '2', Icons.calendar_today_outlined),
+            ),
+          ),
+        ],
       ],
     );
   }
 
   Widget _buildStatCard(String title, String count, IconData icon) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: GlassmorphicContainer(
-          blur: 10,
-          borderRadius: 16,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Icon(icon, color: AppColors.darkRed, size: 28),
-              const SizedBox(height: 8),
-              Text(
-                count,
-                style: AppTextStyles.headingMedium.copyWith(
-                  color: AppColors.white,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+    return GlassmorphicContainer(
+      blur: 10,
+      borderRadius: 16,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Icon(icon, color: AppColors.darkRed, size: 28),
+          const SizedBox(height: 8),
+          Text(
+            count,
+            style: AppTextStyles.headingMedium.copyWith(
+              color: AppColors.white,
+            ),
           ),
-        ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(BuildContext context, String title) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -135,6 +166,7 @@ class StudentHomeScreen extends ConsumerWidget {
           title,
           style: AppTextStyles.headingMedium.copyWith(
             color: AppColors.white,
+            fontSize: ResponsiveUtils.getResponsiveFontSize(context, 20),
           ),
         ),
         TextButton(
@@ -152,24 +184,28 @@ class StudentHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRecommendedOpportunities() {
+  Widget _buildRecommendedOpportunities(BuildContext context) {
     return SizedBox(
       height: 240,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: DummyData.featuredOpportunities.length,
         itemBuilder: (context, index) {
-          final opportunity = DummyData.featuredOpportunities[index];
+          final o = DummyData.featuredOpportunities[index];
+          final cardWidth = ResponsiveUtils.isMobile(context) 
+              ? MediaQuery.of(context).size.width * 0.75
+              : 320.0;
+              
           return Padding(
             padding: const EdgeInsets.only(right: 16),
             child: SizedBox(
-              width: MediaQuery.of(context).size.width * 0.75,
+              width: cardWidth,
               child: OpportunityCard(
-                title: opportunity['title'] as String,
-                startup: opportunity['startup'] as String,
-                location: opportunity['location'] as String,
-                type: opportunity['type'] as String,
-                logo: opportunity['logo'] as IconData,
+                title: o['title'],
+                startup: o['startup'],
+                location: o['location'],
+                type: o['type'],
+                logo: o['logo'],
               ),
             ),
           );
@@ -178,8 +214,7 @@ class StudentHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildApplicationStatus() {
-    // Using final instead of const because the list contains AppColors values
+  Widget _buildApplicationStatus(BuildContext context) {
     final applications = [
       {'title': 'UI/UX Designer', 'startup': 'DesignHub', 'status': 'Interview', 'color': AppColors.darkRed},
       {'title': 'Frontend Developer', 'startup': 'TechStart', 'status': 'Pending', 'color': AppColors.lightGray},
@@ -213,6 +248,7 @@ class StudentHomeScreen extends ConsumerWidget {
                         app['title'] as String,
                         style: AppTextStyles.bodyLarge.copyWith(
                           color: AppColors.white,
+                          fontSize: ResponsiveUtils.getResponsiveFontSize(context, 16),
                         ),
                       ),
                       const SizedBox(height: 4),
