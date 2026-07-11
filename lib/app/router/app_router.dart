@@ -95,7 +95,7 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const RegisterScreen());
         
       case RouteNames.otpVerification:
-        return MaterialPageRoute(builder: (_) => const OtpVerificationScreen());
+        return MaterialPageRoute(builder: (_) => const OtpVerificationScreen(email: 'student@alu.ac.ke'));
         
       case RouteNames.home:
         return MaterialPageRoute(builder: (_) => const HomeShell());
