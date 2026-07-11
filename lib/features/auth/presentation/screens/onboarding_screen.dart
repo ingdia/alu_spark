@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/glassmorphism_container.dart';
+import 'login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -48,7 +49,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       // Placeholder navigation for the next commit (Login Screen)
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const _LoginPlaceholder()),
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     }
   }
@@ -160,17 +161,4 @@ class _OnboardingData {
   final String description;
 
   _OnboardingData({required this.icon, required this.title, required this.description});
-}
-
-// Temporary placeholder to test navigation until Commit 3
-class _LoginPlaceholder extends StatelessWidget {
-  const _LoginPlaceholder();
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Text('Login Screen (Next Commit)', style: Theme.of(context).textTheme.headlineMedium),
-      ),
-    );
-  }
 }

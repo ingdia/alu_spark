@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/glassmorphism_container.dart';
+import 'package:alu_spark/features/home/presentation/screens/home_shell.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -129,8 +130,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           child: ElevatedButton(
                             onPressed: () {
-                              // Placeholder: Navigate to Home or Dummy Dashboard
-                              // We will wire up real routing in Commit 10
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (_) => const HomeShell()),
+                                (route) => false,
+                              );
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
