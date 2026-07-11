@@ -1,23 +1,34 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary Brand Colors
-  static const Color darkRed = Color(0xFF8B1A2B);   // Rich ALU Crimson
-  static const Color darkBlue = Color(0xFF1A2B4C);  // Deep Navy
+  AppColors._();
+
+  // Core Palette
+  static const Color darkBlue = Color(0xFF0B132B);
+  static const Color darkBlueLight = Color(0xFF1C2541);
+  static const Color darkRed = Color(0xFF9A031E);
+  static const Color darkRedLight = Color(0xFFB91C1C);
   static const Color white = Color(0xFFFFFFFF);
   static const Color offWhite = Color(0xFFF8F9FA);
-  
-  // Secondary/Accent Colors
-  static const Color lightRed = Color(0xFFD94F5C);
-  static const Color lightBlue = Color(0xFF4A6FA5);
-  
-  // Neutral & Background Colors
-  static const Color black = Color(0xFF121212);
-  static const Color grey = Color(0xFF9E9E9E);
-  static const Color lightGrey = Color(0xFFE0E0E0);
-  static const Color background = Color(0xFFF5F7FA);
-  
-  // Glassmorphism Specific Colors
-  static const Color glassWhite = Color(0x40FFFFFF);
-  static const Color glassBorder = Color(0x80FFFFFF);
+
+  // Glassmorphism & Surfaces
+  static const Color glassWhite = Color(0x1AFFFFFF); // 10% opacity
+  static const Color borderGlass = Color(0x33FFFFFF); // 20% opacity
+
+  // Text
+  static const Color textPrimary = Color(0xFFFFFFFF);
+  static const Color textSecondary = Color(0xFF94A3B8);
+
+  // Gradients
+  static const LinearGradient backgroundGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [darkBlue, darkBlueLight],
+  );
+
+  static const LinearGradient redGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [darkRed, darkRedLight],
+  );
 }
