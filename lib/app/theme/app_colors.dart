@@ -12,11 +12,15 @@ class AppColors {
   static const Color offWhite = Color(0xFFF8F9FA);
 
   // Glassmorphism & Surfaces
-  static const Color glassWhite = Color(0x1AFFFFFF); // 10% opacity
-  static const Color borderGlass = Color(0x33FFFFFF); // 20% opacity
+  static const Color glassWhite = Color(0x1AFFFFFF);
+  static const Color borderGlass = Color(0x33FFFFFF);
 
-  static const Color lightGray = Color(0xFFCBD5E1); = Color(0xFFFFFFFF);
+  // Text
+  static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFF94A3B8);
+
+  // UI
+  static const Color lightGray = Color(0xFFCBD5E1);
 
   // Gradients
   static const LinearGradient backgroundGradient = LinearGradient(

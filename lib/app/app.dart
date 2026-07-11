@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'theme/app_theme.dart';
-import '../features/auth/presentation/screens/splash_screen.dart';
+import '../features/auth/presentation/screens/login_screen.dart';
 
 class ALUSparkApp extends StatelessWidget {
   const ALUSparkApp({super.key});
@@ -10,8 +10,8 @@ class ALUSparkApp extends StatelessWidget {
     return MaterialApp(
       title: 'ALU Spark',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      home: const SplashScreen(), // Start with Splash
+      theme: AppTheme.darkTheme, // Make sure to use your darkTheme here!
+      home: const LoginScreen(), // Temporarily set to LoginScreen
     );
   }
 }
