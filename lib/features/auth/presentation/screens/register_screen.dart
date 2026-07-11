@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/glassmorphism_container.dart';
+import 'otp_verification_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -145,7 +146,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         child: ElevatedButton(
                           onPressed: () {
-                            // Placeholder: Handle Registration
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => OtpVerificationScreen(
+                                  email: _emailController.text.isEmpty ? 'student@alu.ac.ke' : _emailController.text,
+                                ),
+                              ),
+                            );
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
