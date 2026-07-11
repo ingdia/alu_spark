@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 
-// Existing screens imports
+// --- Auth Screens ---
 import 'package:alu_spark/features/auth/presentation/screens/splash_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/onboarding_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/login_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/register_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/otp_verification_screen.dart';
-import 'package:alu_spark/features/home/presentation/screens/home_shell.dart';
-import 'package:alu_spark/features/opportunities/presentation/screens/discover_screen.dart';
 
-// New imports for Commit 11
+// --- Home & Core Navigation ---
+import 'package:alu_spark/features/home/presentation/screens/home_shell.dart';
+
+// --- Opportunities ---
 import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
+import 'package:alu_spark/features/opportunities/presentation/screens/discover_screen.dart';
+import 'package:alu_spark/features/opportunities/presentation/screens/search_screen.dart';
 import 'package:alu_spark/features/opportunities/presentation/screens/opportunity_detail_screen.dart';
 
 class RouteNames {
@@ -30,7 +33,7 @@ class RouteNames {
   static const String postOpportunity = '/post-opportunity';
   
   // Opportunities
-  static const String opportunityDetail = '/opportunity-detail'; // Added
+  static const String opportunityDetail = '/opportunity-detail';
   
   // Profiles
   static const String studentProfile = '/student-profile';
@@ -58,7 +61,9 @@ class RouteNames {
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
+      // ==========================================
       // --- Implemented Screens ---
+      // ==========================================
       case RouteNames.splash:
         return MaterialPageRoute(builder: (_) => const SplashScreen());
       case RouteNames.onboarding:
@@ -73,17 +78,17 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const HomeShell());
       case RouteNames.discover:
         return MaterialPageRoute(builder: (_) => const DiscoverScreen());
-        
-      // New Route for Commit 11
+      case RouteNames.search:
+        return MaterialPageRoute(builder: (_) => const SearchScreen());
       case RouteNames.opportunityDetail:
         final opportunity = settings.arguments as Opportunity;
         return MaterialPageRoute(
           builder: (_) => OpportunityDetailScreen(opportunity: opportunity),
         );
 
+      // ==========================================
       // --- Placeholder Routes ---
-      case RouteNames.search:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Search'));
+      // ==========================================
       case RouteNames.postOpportunity:
         return MaterialPageRoute(builder: (_) => _placeholderScreen('Post Opportunity'));
       case RouteNames.studentProfile:
@@ -115,7 +120,9 @@ class AppRouter {
       case RouteNames.bookmarks:
         return MaterialPageRoute(builder: (_) => _placeholderScreen('Bookmarks'));
 
-      // --- Fallback ---
+      // ==========================================
+      // --- Fallback Route ---
+      // ==========================================
       default:
         return MaterialPageRoute(
           builder: (_) => _placeholderScreen('Unknown Route: ${settings.name}'),
