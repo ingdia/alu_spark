@@ -24,6 +24,7 @@ import 'package:alu_spark/features/opportunities/presentation/screens/discover_s
 import 'package:alu_spark/features/opportunities/presentation/screens/search_screen.dart';
 import 'package:alu_spark/features/opportunities/presentation/screens/opportunity_detail_screen.dart';
 import 'package:alu_spark/features/opportunities/presentation/screens/post_opportunity_screen.dart';
+import 'package:alu_spark/features/opportunities/presentation/screens/bookmarks_screen.dart';
 
 // ==========================================
 // Student Profile
@@ -35,6 +36,40 @@ import 'package:alu_spark/features/student_profile/presentation/screens/student_
 // Startup Profile
 // ==========================================
 import 'package:alu_spark/features/startup_profile/presentation/screens/startup_profile_screen.dart';
+import 'package:alu_spark/features/startup_profile/presentation/screens/startup_profile_edit_screen.dart';
+
+// ==========================================
+// Applications
+// ==========================================
+import 'package:alu_spark/features/applications/presentation/screens/apply_opportunity_screen.dart';
+import 'package:alu_spark/features/applications/presentation/screens/application_tracking_screen.dart';
+import 'package:alu_spark/features/applications/presentation/screens/applications_received_screen.dart';
+
+// ==========================================
+// Admin Verification
+// ==========================================
+import 'package:alu_spark/features/admin_verification/presentation/screens/admin_verification_screen.dart';
+
+// ==========================================
+// Admin User Management
+// ==========================================
+import 'package:alu_spark/features/admin_user_management/presentation/screens/admin_user_management_screen.dart';
+
+// ==========================================
+// Admin Analytics
+// ==========================================
+import 'package:alu_spark/features/admin_analytics/presentation/screens/admin_analytics_screen.dart';
+
+// ==========================================
+// Messaging
+// ==========================================
+import 'package:alu_spark/features/messaging/presentation/screens/chat_list_screen.dart';
+import 'package:alu_spark/features/messaging/presentation/screens/chat_detail_screen.dart';
+
+// ==========================================
+// Notifications
+// ==========================================
+import 'package:alu_spark/features/notifications/presentation/screens/notifications_screen.dart';
 
 class RouteNames {
   // Auth & Onboarding
@@ -52,6 +87,7 @@ class RouteNames {
   static const String search = '/search';
   static const String postOpportunity = '/post-opportunity';
   static const String opportunityDetail = '/opportunity-detail';
+  static const String bookmarks = '/bookmarks';
   
   // Profiles
   static const String studentProfile = '/student-profile';
@@ -73,7 +109,6 @@ class RouteNames {
   static const String chatList = '/chat-list';
   static const String chatDetail = '/chat-detail';
   static const String notifications = '/notifications';
-  static const String bookmarks = '/bookmarks';
 }
 
 class AppRouter {
@@ -82,6 +117,8 @@ class AppRouter {
       // ==========================================
       // --- Implemented Screens ---
       // ==========================================
+      
+      // Auth & Onboarding
       case RouteNames.splash:
         return MaterialPageRoute(builder: (_) => const SplashScreen());
         
@@ -97,9 +134,11 @@ class AppRouter {
       case RouteNames.otpVerification:
         return MaterialPageRoute(builder: (_) => const OtpVerificationScreen(email: 'student@alu.ac.ke'));
         
+      // Home
       case RouteNames.home:
         return MaterialPageRoute(builder: (_) => const HomeShell());
         
+      // Opportunities
       case RouteNames.discover:
         return MaterialPageRoute(builder: (_) => const DiscoverScreen());
         
@@ -115,40 +154,62 @@ class AppRouter {
           builder: (_) => OpportunityDetailScreen(opportunity: opportunity),
         );
         
+      case RouteNames.bookmarks:
+        return MaterialPageRoute(builder: (_) => const BookmarksScreen());
+        
+      // Student Profile
       case RouteNames.studentProfile:
         return MaterialPageRoute(builder: (_) => const StudentProfileScreen());
         
       case RouteNames.studentProfileEdit:
         return MaterialPageRoute(builder: (_) => const StudentProfileEditScreen());
         
+      // Startup Profile
       case RouteNames.startupProfile:
         return MaterialPageRoute(builder: (_) => const StartupProfileScreen());
-
-      // ==========================================
-      // --- Placeholder Routes (Upcoming Commits) ---
-      // ==========================================
+        
       case RouteNames.startupProfileEdit:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Startup Profile Edit'));
+        return MaterialPageRoute(builder: (_) => const StartupProfileEditScreen());
+        
+      // Applications
       case RouteNames.applyOpportunity:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Apply to Opportunity'));
+        final opportunity = settings.arguments as Opportunity;
+        return MaterialPageRoute(
+          builder: (_) => ApplyOpportunityScreen(opportunity: opportunity),
+        );
+        
       case RouteNames.applicationTracking:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Application Tracking'));
+        return MaterialPageRoute(builder: (_) => const ApplicationTrackingScreen());
+        
       case RouteNames.applicationsReceived:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Applications Received'));
+        return MaterialPageRoute(builder: (_) => const ApplicationsReceivedScreen());
+        
+      // Admin
       case RouteNames.adminVerification:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Admin Verification'));
+        return MaterialPageRoute(builder: (_) => const AdminVerificationScreen());
+        
       case RouteNames.adminUserManagement:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Admin User Management'));
+        return MaterialPageRoute(builder: (_) => const AdminUserManagementScreen());
+        
       case RouteNames.adminAnalytics:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Admin Analytics'));
+        return MaterialPageRoute(builder: (_) => const AdminAnalyticsScreen());
+        
+      // Messaging
       case RouteNames.chatList:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Chat List'));
+        return MaterialPageRoute(builder: (_) => const ChatListScreen());
+        
       case RouteNames.chatDetail:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Chat Detail'));
+        final args = settings.arguments as Map<String, String>;
+        return MaterialPageRoute(
+          builder: (_) => ChatDetailScreen(
+            contactName: args['contactName']!,
+            contactRole: args['contactRole']!,
+          ),
+        );
+        
+      // Notifications
       case RouteNames.notifications:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Notifications'));
-      case RouteNames.bookmarks:
-        return MaterialPageRoute(builder: (_) => _placeholderScreen('Bookmarks'));
+        return MaterialPageRoute(builder: (_) => const NotificationsScreen());
 
       // ==========================================
       // --- Fallback Route ---
