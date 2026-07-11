@@ -45,36 +45,23 @@ class FounderHomeScreen extends ConsumerWidget {
           children: [
             Text(
               'Welcome back,',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 4),
             Text(
               'TechStart Team',
-              style: AppTextStyles.headingMedium.copyWith(
-                color: AppColors.white,
-              ),
+              style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
             ),
           ],
         ),
-        GestureDetector(
-          onTap: () {
-            // TODO: Navigate to notifications
-          },
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.glassWhite,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.borderGlass),
-            ),
-            child: const Icon(
-              Icons.notifications_outlined,
-              color: AppColors.white,
-              size: 24,
-            ),
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.glassWhite,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.borderGlass),
           ),
+          child: const Icon(Icons.notifications_outlined, color: AppColors.white, size: 24),
         ),
       ],
     );
@@ -103,19 +90,11 @@ class FounderHomeScreen extends ConsumerWidget {
             children: [
               Icon(icon, color: AppColors.darkRed, size: 28),
               const SizedBox(height: 8),
-              Text(
-                count,
-                style: AppTextStyles.headingMedium.copyWith(
-                  color: AppColors.white,
-                ),
-              ),
+              Text(count, style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
               const SizedBox(height: 4),
               Text(
                 title,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
-                ),
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -129,22 +108,10 @@ class FounderHomeScreen extends ConsumerWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          title,
-          style: AppTextStyles.headingMedium.copyWith(
-            color: AppColors.white,
-          ),
-        ),
+        Text(title, style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
         TextButton(
-          onPressed: () {
-            // TODO: Navigate to see all
-          },
-          child: Text(
-            'See All',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.darkRed,
-            ),
-          ),
+          onPressed: () {},
+          child: Text('See All', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed)),
         ),
       ],
     );
@@ -154,23 +121,11 @@ class FounderHomeScreen extends ConsumerWidget {
     return Row(
       children: [
         Expanded(
-          child: _buildActionButton(
-            'Post Opportunity',
-            Icons.add_circle_outline,
-            () {
-              // TODO: Navigate to post opportunity
-            },
-          ),
+          child: _buildActionButton('Post Opportunity', Icons.add_circle_outline, () {}),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: _buildActionButton(
-            'Manage Profile',
-            Icons.business_outlined,
-            () {
-              // TODO: Navigate to startup profile
-            },
-          ),
+          child: _buildActionButton('Manage Profile', Icons.business_outlined, () {}),
         ),
       ],
     );
@@ -191,9 +146,7 @@ class FounderHomeScreen extends ConsumerWidget {
             Flexible(
               child: Text(
                 title,
-                style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.white,
-                ),
+                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -204,7 +157,66 @@ class FounderHomeScreen extends ConsumerWidget {
   }
 
   Widget _buildRecentApplications() {
-    // Using final instead of const because the list contains AppColors values
     final applications = [
       {'name': 'Alex Johnson', 'role': 'UI/UX Designer', 'status': 'New', 'color': AppColors.darkRed},
       {'name': 'Sarah Lee', 'role': 'Frontend Dev', 'status': 'Reviewing', 'color': AppColors.lightGray},
+      {'name': 'James Mwangi', 'role': 'Marketing Intern', 'status': 'Shortlisted', 'color': AppColors.darkRedLight},
+    ];
+
+    return Column(
+      children: applications.map((app) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: GlassmorphicContainer(
+            blur: 10,
+            borderRadius: 16,
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: AppColors.glassWhite,
+                  child: Text(
+                    (app['name'] as String)[0],
+                    style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        app['name'] as String,
+                        style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        app['role'] as String,
+                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: (app['color'] as Color).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    app['status'] as String,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: app['color'] as Color,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
