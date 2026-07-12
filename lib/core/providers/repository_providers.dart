@@ -7,6 +7,8 @@ import 'package:alu_spark/features/startup_profile/data/repositories/startup_rep
 import 'package:alu_spark/features/startup_profile/domain/repositories/startup_repository.dart';
 import 'package:alu_spark/features/admin_user_management/data/repositories/user_repository_impl.dart';
 import 'package:alu_spark/features/admin_user_management/domain/repositories/user_repository.dart';
+import 'package:alu_spark/features/admin_analytics/data/repositories/analytics_repository_impl.dart';
+import 'package:alu_spark/features/admin_analytics/domain/repositories/analytics_repository.dart';
 
 // Opportunity Repository
 final opportunityRepositoryProvider = Provider<OpportunityRepository>((ref) {
@@ -26,4 +28,9 @@ final startupRepositoryProvider = Provider<StartupRepository>((ref) {
 // User Repository (For Admin)
 final userRepositoryProvider = Provider<UserRepository>((ref) {
   return UserRepositoryImpl();
+});
+
+// Analytics Repository (For Admin)
+final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
+  return AnalyticsRepositoryImpl();
 });
