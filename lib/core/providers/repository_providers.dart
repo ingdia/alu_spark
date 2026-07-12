@@ -11,13 +11,16 @@ import 'package:alu_spark/features/admin_analytics/data/repositories/analytics_r
 import 'package:alu_spark/features/admin_analytics/domain/repositories/analytics_repository.dart';
 import 'package:alu_spark/features/messaging/data/repositories/message_repository_impl.dart';
 import 'package:alu_spark/features/messaging/domain/repositories/message_repository.dart';
+import 'package:alu_spark/features/notifications/data/repositories/notification_repository_impl.dart';
+import 'package:alu_spark/features/notifications/domain/repositories/notification_repository.dart';
 
 final opportunityRepositoryProvider = Provider<OpportunityRepository>((ref) => OpportunityRepositoryImpl());
 final applicationRepositoryProvider = Provider<ApplicationRepository>((ref) => ApplicationRepositoryImpl());
 final startupRepositoryProvider = Provider<StartupRepository>((ref) => StartupRepositoryImpl());
 final userRepositoryProvider = Provider<UserRepository>((ref) => UserRepositoryImpl());
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) => AnalyticsRepositoryImpl());
+final messageRepositoryProvider = Provider<MessageRepository>((ref) => MessageRepositoryImpl());
 
-final messageRepositoryProvider = Provider<MessageRepository>((ref) {
-  return MessageRepositoryImpl();
+final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
+  return NotificationRepositoryImpl();
 });
