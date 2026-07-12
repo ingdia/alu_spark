@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
+import 'package:alu_spark/core/providers/repository_providers.dart';
+import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 
 class PostOpportunityScreen extends ConsumerStatefulWidget {
   const PostOpportunityScreen({super.key});
@@ -23,12 +25,15 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
   String _selectedLocation = 'Kigali';
   String _selectedType = 'Internship';
 
+  // Using final for lists to align with project conventions
   final List<String> _categories = ['Tech', 'Design', 'Marketing', 'Business', 'Finance'];
   final List<String> _locations = ['Kigali', 'Remote', 'Nairobi', 'Cape Town', 'Lagos'];
   final List<String> _types = ['Internship', 'Part-time', 'Full-time', 'Freelance'];
 
   final List<String> _requirements = [];
   final List<String> _benefits = [];
+  
+  bool _isPosting = false;
 
   @override
   void dispose() {
@@ -38,6 +43,66 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
     _reqInputController.dispose();
     _benInputController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handlePostOpportunity() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isPosting = true);
+
+    try {
+      // TODO: Replace with actual logged-in founder's startup ID and name once Startup Profile is built
+      final startupId = 'dummy_startup_id_123'; 
+      final startupName = 'TechStart'; 
+
+      final opportunity = Opportunity(
+        id: '', // Repository will generate the actual Firestore ID
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        startupId: startupId,
+        startupName: startupName,
+        category: _selectedCategory,
+        location: _selectedLocation,
+        type: _selectedType,
+        salary: _salaryController.text.trim().isEmpty ? null : _salaryController.text.trim(),
+        requirements: _requirements,
+        benefits: _benefits,
+        createdAt: DateTime.now(),
+      );
+
+      await ref.read(opportunityRepositoryProvider).createOpportunity(opportunity);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Opportunity posted successfully!'),
+            backgroundColor: AppColors.darkRed,
+          ),
+        );
+        
+        // Clear form and go back
+        _titleController.clear();
+        _descriptionController.clear();
+        _salaryController.clear();
+        setState(() {
+          _requirements.clear();
+          _benefits.clear();
+        });
+        
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to post: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isPosting = false);
+    }
   }
 
   @override
@@ -323,9 +388,7 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
       width: double.infinity,
       height: 50,
       child: ElevatedButton(
-        onPressed: () {
-          // TODO: Trigger provider to post opportunity
-        },
+        onPressed: _isPosting ? null : _handlePostOpportunity,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.darkRed,
           shape: RoundedRectangleBorder(
@@ -333,10 +396,19 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
           ),
           elevation: 0,
         ),
-        child: Text(
-          'Post Opportunity',
-          style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
-        ),
+        child: _isPosting
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: AppColors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : Text(
+                'Post Opportunity',
+                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
+              ),
       ),
     );
   }
