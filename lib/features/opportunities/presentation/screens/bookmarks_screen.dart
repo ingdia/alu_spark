@@ -145,22 +145,4 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
     );
   }
 
-  Widget _buildBookmarksList() {
-    // In a real app, we would filter _bookmarkedOpportunities based on _selectedFilter
-    return Column(
-      children: _bookmarkedOpportunities.map((o) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: OpportunityCard(
-            title: o['title'],
-            startup: o['startup'],
-            location: o['location'],
-            type: o['type'],
-            logo: o['logo'],
-            postedDays: o['postedDays'],
-          ),
-        );
-      }).toList(),
-    );
-  }
 }

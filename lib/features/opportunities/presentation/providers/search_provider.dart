@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:alu_spark/core/constants/dummy_data.dart';
+import 'package:alu_spark/core/providers/repository_providers.dart';
+import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 
 class SearchState {
   final String query;
@@ -9,6 +10,7 @@ class SearchState {
   final List<String> categories;
   final List<String> locations;
   final List<String> types;
+  final List<Opportunity> allOpportunities;
 
   const SearchState({
     this.query = '',
@@ -18,26 +20,18 @@ class SearchState {
     this.categories = const ['All', 'Tech', 'Design', 'Marketing', 'Business', 'Finance'],
     this.locations = const ['Anywhere', 'Kigali', 'Remote', 'Nairobi', 'Cape Town'],
     this.types = const ['Any', 'Internship', 'Part-time', 'Full-time', 'Freelance'],
+    this.allOpportunities = const [],
   });
 
-  List<Map<String, dynamic>> get results {
-    final all = List<Map<String, dynamic>>.from(DummyData.recentOpportunities);
-    return all.where((o) {
-      final title = (o['title'] as String? ?? '').toLowerCase();
-      final startup = (o['startup'] as String? ?? '').toLowerCase();
-      final location = (o['location'] as String? ?? '').toLowerCase();
-      final type = (o['type'] as String? ?? '').toLowerCase();
-
+  List<Opportunity> get results {
+    return allOpportunities.where((o) {
       final matchesQuery = query.isEmpty ||
-          title.contains(query.toLowerCase()) ||
-          startup.contains(query.toLowerCase());
-
+          o.title.toLowerCase().contains(query.toLowerCase()) ||
+          o.startupName.toLowerCase().contains(query.toLowerCase());
       final matchesLocation = selectedLocation == 'Anywhere' ||
-          location.contains(selectedLocation.toLowerCase());
-
-      final matchesType =
-          selectedType == 'Any' || type.contains(selectedType.toLowerCase());
-
+          o.location.toLowerCase().contains(selectedLocation.toLowerCase());
+      final matchesType = selectedType == 'Any' ||
+          o.type.toLowerCase().contains(selectedType.toLowerCase());
       return matchesQuery && matchesLocation && matchesType;
     }).toList();
   }
@@ -47,6 +41,7 @@ class SearchState {
     String? selectedCategory,
     String? selectedLocation,
     String? selectedType,
+    List<Opportunity>? allOpportunities,
   }) {
     return SearchState(
       query: query ?? this.query,
@@ -56,19 +51,26 @@ class SearchState {
       categories: categories,
       locations: locations,
       types: types,
+      allOpportunities: allOpportunities ?? this.allOpportunities,
     );
   }
 }
 
 class SearchNotifier extends Notifier<SearchState> {
   @override
-  SearchState build() => const SearchState();
+  SearchState build() {
+    // Listen to opportunities stream and update allOpportunities
+    ref.watch(opportunityRepositoryProvider).getOpportunities().listen((list) {
+      state = state.copyWith(allOpportunities: list);
+    });
+    return const SearchState();
+  }
 
   void setQuery(String query) => state = state.copyWith(query: query);
   void setCategory(String category) => state = state.copyWith(selectedCategory: category);
   void setLocation(String location) => state = state.copyWith(selectedLocation: location);
   void setType(String type) => state = state.copyWith(selectedType: type);
-  void reset() => state = const SearchState();
+  void reset() => state = state.copyWith(query: '', selectedCategory: 'All', selectedLocation: 'Anywhere', selectedType: 'Any');
 }
 
 final searchProvider = NotifierProvider<SearchNotifier, SearchState>(
