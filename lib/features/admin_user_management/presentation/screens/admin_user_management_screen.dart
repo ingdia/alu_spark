@@ -23,14 +23,33 @@ class _AdminUserManagementScreenState extends ConsumerState<AdminUserManagementS
 
   @override
   Widget build(BuildContext context) {
-    // Watch the appropriate stream based on the selected filter
     final usersAsync = _selectedFilter == 'All'
         ? ref.watch(usersProvider)
         : ref.watch(usersByRoleProvider(_selectedFilter.toLowerCase()));
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
-      appBar: _buildAppBar(),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: GlassmorphicContainer(
+            blur: 10,
+            borderRadius: 12,
+            padding: const EdgeInsets.all(0),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 18),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+        ),
+        title: Text(
+          'User Management',
+          style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
+        ),
+        centerTitle: true,
+      ),
       body: Column(
         children: [
           _buildFilterTabs(),
@@ -39,6 +58,7 @@ class _AdminUserManagementScreenState extends ConsumerState<AdminUserManagementS
               loading: () => const LoadingWidget(message: 'Fetching users...'),
               error: (error, _) => ErrorStateWidget(
                 message: error.toString(),
+                description: 'Failed to load users.',
                 onRetry: () => ref.invalidate(usersProvider),
               ),
               data: (users) => _buildContent(users),
@@ -46,30 +66,6 @@ class _AdminUserManagementScreenState extends ConsumerState<AdminUserManagementS
           ),
         ],
       ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      leading: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GlassmorphicContainer(
-          blur: 10,
-          borderRadius: 12,
-          padding: const EdgeInsets.all(0),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 18),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ),
-      ),
-      title: Text(
-        'User Management',
-        style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
-      ),
-      centerTitle: true,
     );
   }
 
@@ -210,9 +206,7 @@ class _AdminUserManagementScreenState extends ConsumerState<AdminUserManagementS
                   ],
                 ),
                 GestureDetector(
-                  onTap: () {
-                    // TODO: Show bottom sheet to change role
-                  },
+                  onTap: () {},
                   child: Text(
                     'Manage',
                     style: AppTextStyles.bodyMedium.copyWith(
@@ -230,7 +224,6 @@ class _AdminUserManagementScreenState extends ConsumerState<AdminUserManagementS
   }
 }
 
-// Extension to capitalize role names
 extension StringCasingExtension on String {
   String capitalize() => '${this[0].toUpperCase()}${substring(1).toLowerCase()}';
 }

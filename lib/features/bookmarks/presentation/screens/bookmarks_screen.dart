@@ -20,38 +20,55 @@ class BookmarksScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
-      appBar: _buildAppBar(),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: GlassmorphicContainer(
+            blur: 10,
+            borderRadius: 12,
+            padding: const EdgeInsets.all(0),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 18),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+        ),
+        title: Text(
+          'Bookmarks',
+          style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
+        ),
+        centerTitle: true,
+      ),
       body: authState.when(
         loading: () => const LoadingWidget(),
-        error: (_, __) => const ErrorStateWidget(message: 'Failed to load user'),
+        error: (error, _) => ErrorStateWidget(
+          message: error.toString(),
+          description: 'Failed to load user',
+        ),
         data: (user) {
-          if (user == null) return const EmptyStateWidget(icon: Icons.lock, title: 'Not Logged In');
+          if (user == null) {
+            return const EmptyStateWidget(
+              icon: Icons.lock,
+              title: 'Not Logged In',
+              description: 'Please log in to view bookmarks.',
+            );
+          }
           
           final bookmarksAsync = ref.watch(bookmarksProvider(user.id));
           
           return bookmarksAsync.when(
             loading: () => const LoadingWidget(message: 'Loading bookmarks...'),
-            error: (error, _) => ErrorStateWidget(message: error.toString(), onRetry: () => ref.invalidate(bookmarksProvider(user.id))),
+            error: (error, _) => ErrorStateWidget(
+              message: error.toString(),
+              description: 'Failed to load bookmarks.',
+              onRetry: () => ref.invalidate(bookmarksProvider(user.id)),
+            ),
             data: (bookmarks) => _buildContent(context, ref, bookmarks),
           );
         },
       ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      leading: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GlassmorphicContainer(
-          blur: 10, borderRadius: 12, padding: const EdgeInsets.all(0),
-          child: IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 18), onPressed: () => Navigator.of(context).pop()),
-        ),
-      ),
-      title: Text('Bookmarks', style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
-      centerTitle: true,
     );
   }
 
@@ -79,22 +96,33 @@ class BookmarksScreen extends ConsumerWidget {
         background: Container(
           alignment: Alignment.centerRight,
           padding: const EdgeInsets.only(right: 20),
-          decoration: BoxDecoration(color: Colors.red.shade900, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(
+            color: Colors.red.shade900,
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: const Icon(Icons.delete_outline, color: AppColors.white),
         ),
         onDismissed: (_) {
           ref.read(bookmarkRepositoryProvider).removeBookmark(bookmark.id);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Bookmark removed'), backgroundColor: AppColors.darkRed),
+            const SnackBar(
+              content: Text('Bookmark removed'),
+              backgroundColor: AppColors.darkRed,
+            ),
           );
         },
         child: GlassmorphicContainer(
-          blur: 10, borderRadius: 16, padding: const EdgeInsets.all(16),
+          blur: 10,
+          borderRadius: 16,
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: AppColors.darkRed.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(
+                  color: AppColors.darkRed.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: const Icon(Icons.bookmark, color: AppColors.darkRed, size: 24),
               ),
               const SizedBox(width: 16),
@@ -102,9 +130,20 @@ class BookmarksScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(bookmark.opportunityTitle, style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(
+                      bookmark.opportunityTitle,
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     const SizedBox(height: 4),
-                    Text(bookmark.startupName, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                    Text(
+                      bookmark.startupName,
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                    ),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 6,
@@ -126,8 +165,18 @@ class BookmarksScreen extends ConsumerWidget {
   Widget _buildTag(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: AppColors.glassWhite, borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.borderGlass)),
-      child: Text(text, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white, fontSize: 10)),
+      decoration: BoxDecoration(
+        color: AppColors.glassWhite,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.borderGlass),
+      ),
+      child: Text(
+        text,
+        style: AppTextStyles.bodyMedium.copyWith(
+          color: AppColors.white,
+          fontSize: 10,
+        ),
+      ),
     );
   }
 }

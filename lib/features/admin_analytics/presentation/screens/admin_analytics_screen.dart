@@ -17,39 +17,36 @@ class AdminAnalyticsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
-      appBar: _buildAppBar(),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: GlassmorphicContainer(
+            blur: 10,
+            borderRadius: 12,
+            padding: const EdgeInsets.all(0),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 18),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+        ),
+        title: Text(
+          'Platform Analytics',
+          style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
+        ),
+        centerTitle: true,
+      ),
       body: statsAsync.when(
         loading: () => const LoadingWidget(message: 'Calculating platform metrics...'),
         error: (error, _) => ErrorStateWidget(
           message: error.toString(),
+          description: 'Failed to load analytics.',
           onRetry: () => ref.invalidate(platformStatsProvider),
         ),
         data: (stats) => _buildContent(context, stats),
       ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      leading: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GlassmorphicContainer(
-          blur: 10,
-          borderRadius: 12,
-          padding: const EdgeInsets.all(0),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 18),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ),
-      ),
-      title: Text(
-        'Platform Analytics',
-        style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
-      ),
-      centerTitle: true,
     );
   }
 

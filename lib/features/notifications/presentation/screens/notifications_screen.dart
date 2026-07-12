@@ -20,58 +20,83 @@ class NotificationsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
-      appBar: _buildAppBar(context, ref),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: GlassmorphicContainer(
+            blur: 10,
+            borderRadius: 12,
+            padding: const EdgeInsets.all(0),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 18),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+        ),
+        title: Text(
+          'Notifications',
+          style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
+        ),
+        centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: GlassmorphicContainer(
+              blur: 10,
+              borderRadius: 12,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+              child: TextButton(
+                onPressed: () {
+                  final user = ref.read(authStateProvider).value;
+                  if (user != null) {
+                    ref.read(notificationRepositoryProvider).markAllAsRead(user.id);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('All notifications marked as read'),
+                        backgroundColor: AppColors.darkRed,
+                      ),
+                    );
+                  }
+                },
+                child: Text(
+                  'Mark All Read',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: authState.when(
         loading: () => const LoadingWidget(),
-        error: (_, __) => const ErrorStateWidget(message: 'Failed to load user'),
+        error: (error, _) => ErrorStateWidget(
+          message: error.toString(),
+          description: 'Failed to load user',
+        ),
         data: (user) {
-          if (user == null) return const EmptyStateWidget(icon: Icons.lock, title: 'Not Logged In');
+          if (user == null) {
+            return const EmptyStateWidget(
+              icon: Icons.lock,
+              title: 'Not Logged In',
+              description: 'Please log in to view notifications.',
+            );
+          }
           
           final notificationsAsync = ref.watch(notificationsProvider(user.id));
           
           return notificationsAsync.when(
             loading: () => const LoadingWidget(message: 'Loading notifications...'),
-            error: (error, _) => ErrorStateWidget(message: error.toString(), onRetry: () => ref.invalidate(notificationsProvider(user.id))),
+            error: (error, _) => ErrorStateWidget(
+              message: error.toString(),
+              description: 'Failed to load notifications.',
+              onRetry: () => ref.invalidate(notificationsProvider(user.id)),
+            ),
             data: (notifications) => _buildContent(context, ref, notifications),
           );
         },
       ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar(BuildContext context, WidgetRef ref) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      leading: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GlassmorphicContainer(
-          blur: 10, borderRadius: 12, padding: const EdgeInsets.all(0),
-          child: IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 18), onPressed: () => Navigator.of(context).pop()),
-        ),
-      ),
-      title: Text('Notifications', style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
-      centerTitle: true,
-      actions: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: GlassmorphicContainer(
-            blur: 10, borderRadius: 12, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-            child: TextButton(
-              onPressed: () async {
-                final user = ref.read(authStateProvider).valueOrNull;
-                if (user != null) {
-                  await ref.read(notificationRepositoryProvider).markAllAsRead(user.id);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('All notifications marked as read'), backgroundColor: AppColors.darkRed),
-                  );
-                }
-              },
-              child: Text('Mark All Read', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white)),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -99,19 +124,24 @@ class NotificationsScreen extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GestureDetector(
-        onTap: () async {
+        onTap: () {
           if (isUnread) {
-            await ref.read(notificationRepositoryProvider).markAsRead(notif.id);
+            ref.read(notificationRepositoryProvider).markAsRead(notif.id);
           }
         },
         child: GlassmorphicContainer(
-          blur: 10, borderRadius: 16, padding: const EdgeInsets.all(16),
+          blur: 10,
+          borderRadius: 16,
+          padding: const EdgeInsets.all(16),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: AppColors.darkRed.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(
+                  color: AppColors.darkRed.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Icon(iconData, color: AppColors.darkRed, size: 24),
               ),
               const SizedBox(width: 16),
@@ -122,14 +152,44 @@ class NotificationsScreen extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(child: Text(notif.title, style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white, fontWeight: isUnread ? FontWeight.w600 : FontWeight.normal))),
-                        if (isUnread) Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.darkRed, shape: BoxShape.circle)),
+                        Expanded(
+                          child: Text(
+                            notif.title,
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              color: AppColors.white,
+                              fontWeight: isUnread ? FontWeight.w600 : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                        if (isUnread)
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppColors.darkRed,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Text(notif.description, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary, height: 1.4), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text(
+                      notif.description,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                        height: 1.4,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     const SizedBox(height: 8),
-                    Text('Just now', style: AppTextStyles.bodyMedium.copyWith(color: isUnread ? AppColors.darkRed : AppColors.textSecondary, fontSize: 12)),
+                    Text(
+                      'Just now',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: isUnread ? AppColors.darkRed : AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ),

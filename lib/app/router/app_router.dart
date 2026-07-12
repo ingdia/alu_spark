@@ -2,49 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 
-// Auth
 import 'package:alu_spark/features/auth/presentation/screens/splash_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/onboarding_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/login_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/register_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/otp_verification_screen.dart';
-
-// Home
 import 'package:alu_spark/features/home/presentation/screens/home_shell.dart';
-
-// Opportunities
 import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 import 'package:alu_spark/features/opportunities/presentation/screens/discover_screen.dart';
 import 'package:alu_spark/features/opportunities/presentation/screens/search_screen.dart';
 import 'package:alu_spark/features/opportunities/presentation/screens/opportunity_detail_screen.dart';
 import 'package:alu_spark/features/opportunities/presentation/screens/post_opportunity_screen.dart';
-
-// Student Profile
 import 'package:alu_spark/features/student_profile/presentation/screens/student_profile_screen.dart';
 import 'package:alu_spark/features/student_profile/presentation/screens/student_profile_edit_screen.dart';
-
-// Startup Profile
 import 'package:alu_spark/features/startup_profile/presentation/screens/startup_profile_screen.dart';
 import 'package:alu_spark/features/startup_profile/presentation/screens/startup_profile_edit_screen.dart';
-
-// Applications
 import 'package:alu_spark/features/applications/presentation/screens/apply_opportunity_screen.dart';
 import 'package:alu_spark/features/applications/presentation/screens/application_tracking_screen.dart';
 import 'package:alu_spark/features/applications/presentation/screens/applications_received_screen.dart';
-
-// Admin
 import 'package:alu_spark/features/admin_verification/presentation/screens/admin_verification_screen.dart';
 import 'package:alu_spark/features/admin_user_management/presentation/screens/admin_user_management_screen.dart';
 import 'package:alu_spark/features/admin_analytics/presentation/screens/admin_analytics_screen.dart';
-
-// Messaging
 import 'package:alu_spark/features/messaging/presentation/screens/chat_list_screen.dart';
 import 'package:alu_spark/features/messaging/presentation/screens/chat_detail_screen.dart';
-
-// Notifications
 import 'package:alu_spark/features/notifications/presentation/screens/notifications_screen.dart';
-
-// Bookmarks (New Firebase-wired location)
 import 'package:alu_spark/features/bookmarks/presentation/screens/bookmarks_screen.dart';
 
 class RouteNames {
@@ -111,8 +92,8 @@ class AppRouter {
         final args = settings.arguments as Map<String, String>;
         return MaterialPageRoute(
           builder: (_) => ChatDetailScreen(
-            contactId: args['contactId']!,
-            contactName: args['contactName']!,
+            contactId: args['contactId'] ?? '',
+            contactName: args['contactName'] ?? 'Unknown',
           ),
         );
         
@@ -123,7 +104,12 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => Scaffold(
             backgroundColor: AppColors.darkBlue,
-            body: Center(child: Text('Route not found: ${settings.name}', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white))),
+            body: Center(
+              child: Text(
+                'Route not found: ${settings.name}',
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
+              ),
+            ),
           ),
         );
     }

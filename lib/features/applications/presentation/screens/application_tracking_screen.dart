@@ -7,7 +7,6 @@ import 'package:alu_spark/core/widgets/loading_widget.dart';
 import 'package:alu_spark/core/widgets/empty_state_widget.dart';
 import 'package:alu_spark/core/widgets/error_state_widget.dart';
 import 'package:alu_spark/core/providers/firebase_providers.dart';
-import 'package:alu_spark/core/providers/repository_providers.dart';
 import 'package:alu_spark/features/applications/presentation/providers/application_provider.dart';
 import 'package:alu_spark/features/applications/domain/entities/application.dart';
 import 'package:alu_spark/shared/enums/application_status.dart';
@@ -17,16 +16,16 @@ class ApplicationTrackingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 1. Get the current logged-in user
     final authState = ref.watch(authStateProvider);
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
       appBar: _buildAppBar(context),
       body: authState.when(
-        loading: () => const LoadingWidget(message: 'Loading your profile...'),
+        loading: () => const LoadingWidget(message: 'Loading...'),
         error: (error, _) => ErrorStateWidget(
-          message: 'Failed to load user data.',
+          message: error.toString(),
+          description: 'Failed to load user data.',
           onRetry: () => ref.invalidate(authStateProvider),
         ),
         data: (user) {
@@ -38,16 +37,16 @@ class ApplicationTrackingScreen extends ConsumerWidget {
             );
           }
 
-          // 2. Watch the real-time applications stream for this user
           final applicationsAsync = ref.watch(applicationsByStudentProvider(user.id));
 
           return applicationsAsync.when(
             loading: () => const LoadingWidget(message: 'Fetching applications...'),
             error: (error, _) => ErrorStateWidget(
               message: error.toString(),
+              description: 'Failed to load applications.',
               onRetry: () => ref.invalidate(applicationsByStudentProvider(user.id)),
             ),
-            data: (applications) => _buildContent(context, ref, applications),
+            data: (applications) => _buildContent(context, applications),
           );
         },
       ),
@@ -78,7 +77,7 @@ class ApplicationTrackingScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, WidgetRef ref, List<Application> applications) {
+  Widget _buildContent(BuildContext context, List<Application> applications) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -248,9 +247,7 @@ class ApplicationTrackingScreen extends ConsumerWidget {
                   ],
                 ),
                 GestureDetector(
-                  onTap: () {
-                    // TODO: Navigate to application details
-                  },
+                  onTap: () {},
                   child: Text(
                     'View Details',
                     style: AppTextStyles.bodyMedium.copyWith(
@@ -271,13 +268,13 @@ class ApplicationTrackingScreen extends ConsumerWidget {
     switch (status) {
       case ApplicationStatus.pending:
       case ApplicationStatus.reviewing:
-        return AppColors.textSecondary; // Gray/White
+        return AppColors.textSecondary;
       case ApplicationStatus.interview:
-        return AppColors.darkRedLight; // Lighter Red/Amber
+        return AppColors.darkRedLight;
       case ApplicationStatus.accepted:
-        return AppColors.darkRed; // Primary Red (or Green if you add it to palette)
+        return AppColors.darkRed;
       case ApplicationStatus.rejected:
-        return AppColors.textSecondary.withOpacity(0.5); // Faded
+        return AppColors.textSecondary.withOpacity(0.5);
     }
   }
 }

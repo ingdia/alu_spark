@@ -11,8 +11,7 @@ import 'package:alu_spark/features/applications/domain/entities/application.dart
 import 'package:alu_spark/shared/enums/application_status.dart';
 
 class ApplicationsReceivedScreen extends ConsumerWidget {
-  // TODO: Replace with actual logged-in founder's startup ID once Startup Profile is wired
-  final String startupId = 'dummy_startup_id_123'; 
+  final String startupId = 'dummy_startup_id_123';
 
   const ApplicationsReceivedScreen({super.key});
 
@@ -22,11 +21,12 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
-      appBar: _buildAppBar(),
+      appBar: _buildAppBar(context),
       body: applicationsAsync.when(
         loading: () => const LoadingWidget(message: 'Fetching applications...'),
         error: (error, _) => ErrorStateWidget(
           message: error.toString(),
+          description: 'Failed to load applications.',
           onRetry: () => ref.invalidate(applicationsByStartupProvider(startupId)),
         ),
         data: (applications) => _buildContent(context, applications),
@@ -34,7 +34,7 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -170,7 +170,7 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
                 CircleAvatar(
                   backgroundColor: statusColor.withOpacity(0.2),
                   child: Text(
-                    app.studentName.substring(0, 1),
+                    app.studentName.isNotEmpty ? app.studentName[0] : '?',
                     style: AppTextStyles.bodyLarge.copyWith(color: statusColor),
                   ),
                 ),
@@ -236,9 +236,7 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {
-                      // TODO: Navigate to student profile
-                    },
+                    onPressed: () {},
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppColors.borderGlass),
                       shape: RoundedRectangleBorder(
@@ -255,9 +253,7 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: Trigger provider to shortlist
-                    },
+                    onPressed: () {},
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.darkRed,
                       shape: RoundedRectangleBorder(
@@ -284,13 +280,13 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
     switch (status) {
       case ApplicationStatus.pending:
       case ApplicationStatus.reviewing:
-        return AppColors.textSecondary; 
+        return AppColors.textSecondary;
       case ApplicationStatus.interview:
-        return AppColors.darkRedLight; 
+        return AppColors.darkRedLight;
       case ApplicationStatus.accepted:
-        return AppColors.darkRed; 
+        return AppColors.darkRed;
       case ApplicationStatus.rejected:
-        return AppColors.textSecondary.withOpacity(0.5); 
+        return AppColors.textSecondary.withOpacity(0.5);
     }
   }
 }

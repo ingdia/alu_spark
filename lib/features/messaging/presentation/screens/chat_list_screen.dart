@@ -19,18 +19,51 @@ class ChatListScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
-      appBar: _buildAppBar(),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: GlassmorphicContainer(
+            blur: 10,
+            borderRadius: 12,
+            padding: const EdgeInsets.all(0),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 18),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+        ),
+        title: Text(
+          'Messages',
+          style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
+        ),
+        centerTitle: true,
+      ),
       body: authState.when(
         loading: () => const LoadingWidget(),
-        error: (_, __) => const ErrorStateWidget(message: 'Failed to load user'),
+        error: (error, _) => ErrorStateWidget(
+          message: error.toString(),
+          description: 'Failed to load user',
+        ),
         data: (user) {
-          if (user == null) return const EmptyStateWidget(icon: Icons.lock, title: 'Not Logged In');
+          if (user == null) {
+            return const EmptyStateWidget(
+              icon: Icons.lock,
+              title: 'Not Logged In',
+              description: 'Please log in to view your messages.',
+            );
+          }
           
           final conversationsAsync = ref.watch(conversationsProvider(user.id));
           
           return conversationsAsync.when(
             loading: () => const LoadingWidget(message: 'Loading conversations...'),
-            error: (error, _) => ErrorStateWidget(message: error.toString(), onRetry: () => ref.invalidate(conversationsProvider(user.id))),
+            error: (error, _) => ErrorStateWidget(
+              message: error.toString(),
+              description: 'Failed to load conversations.',
+              onRetry: () => ref.invalidate(conversationsProvider(user.id)),
+            ),
             data: (conversations) => _buildContent(conversations),
           );
         },
@@ -38,25 +71,13 @@ class ChatListScreen extends ConsumerWidget {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      leading: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GlassmorphicContainer(
-          blur: 10, borderRadius: 12, padding: const EdgeInsets.all(0),
-          child: IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 18), onPressed: () => Navigator.of(context).pop()),
-        ),
-      ),
-      title: Text('Messages', style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
-      centerTitle: true,
-    );
-  }
-
   Widget _buildContent(List<Conversation> conversations) {
     if (conversations.isEmpty) {
-      return const EmptyStateWidget(icon: Icons.chat_bubble_outline, title: 'No Conversations', description: 'Start a chat with a founder or student!');
+      return const EmptyStateWidget(
+        icon: Icons.chat_bubble_outline,
+        title: 'No Conversations',
+        description: 'Start a chat with a founder or student!',
+      );
     }
     return ListView.builder(
       padding: const EdgeInsets.all(20),
@@ -70,12 +91,17 @@ class ChatListScreen extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GlassmorphicContainer(
-        blur: 10, borderRadius: 16, padding: const EdgeInsets.all(16),
+        blur: 10,
+        borderRadius: 16,
+        padding: const EdgeInsets.all(16),
         child: Row(
           children: [
             CircleAvatar(
               backgroundColor: AppColors.darkRed.withOpacity(0.2),
-              child: Text(conv.participantName[0], style: AppTextStyles.headingMedium.copyWith(color: AppColors.darkRed)),
+              child: Text(
+                conv.participantName.isNotEmpty ? conv.participantName[0] : '?',
+                style: AppTextStyles.headingMedium.copyWith(color: AppColors.darkRed),
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -85,20 +111,51 @@ class ChatListScreen extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(child: Text(conv.participantName, style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white, fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal), overflow: TextOverflow.ellipsis)),
-                      Text('Now', style: AppTextStyles.bodyMedium.copyWith(color: hasUnread ? AppColors.darkRed : AppColors.textSecondary, fontSize: 12)),
+                      Expanded(
+                        child: Text(
+                          conv.participantName,
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            color: AppColors.white,
+                            fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        'Now',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: hasUnread ? AppColors.darkRed : AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(conv.lastMessage, style: AppTextStyles.bodyMedium.copyWith(color: hasUnread ? AppColors.white : AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(
+                    conv.lastMessage,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: hasUnread ? AppColors.white : AppColors.textSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ],
               ),
             ),
             if (hasUnread)
               Container(
                 padding: const EdgeInsets.all(6),
-                decoration: const BoxDecoration(color: AppColors.darkRed, shape: BoxShape.circle),
-                child: Text('${conv.unreadCount}', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white, fontSize: 10)),
+                decoration: const BoxDecoration(
+                  color: AppColors.darkRed,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '${conv.unreadCount}',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.white,
+                    fontSize: 10,
+                  ),
+                ),
               ),
           ],
         ),
