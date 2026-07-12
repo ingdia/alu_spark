@@ -3,73 +3,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
+import 'package:alu_spark/core/widgets/loading_widget.dart';
+import 'package:alu_spark/core/widgets/empty_state_widget.dart';
+import 'package:alu_spark/core/widgets/error_state_widget.dart';
+import 'package:alu_spark/features/applications/presentation/providers/application_provider.dart';
+import 'package:alu_spark/features/applications/domain/entities/application.dart';
+import 'package:alu_spark/shared/enums/application_status.dart';
 
-class ApplicationsReceivedScreen extends ConsumerStatefulWidget {
+class ApplicationsReceivedScreen extends ConsumerWidget {
+  // TODO: Replace with actual logged-in founder's startup ID once Startup Profile is wired
+  final String startupId = 'dummy_startup_id_123'; 
+
   const ApplicationsReceivedScreen({super.key});
 
   @override
-  ConsumerState<ApplicationsReceivedScreen> createState() => _ApplicationsReceivedScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final applicationsAsync = ref.watch(applicationsByStartupProvider(startupId));
 
-class _ApplicationsReceivedScreenState extends ConsumerState<ApplicationsReceivedScreen> {
-  String _selectedFilter = 'All';
-  
-  // Using final for lists to align with project conventions
-  final List<String> _filters = ['All', 'New', 'Shortlisted', 'Rejected'];
-
-  final List<Map<String, dynamic>> _applications = [
-    {
-      'name': 'Alex Johnson',
-      'role': 'Frontend Developer',
-      'date': 'Jul 10, 2026',
-      'status': 'New',
-      'color': AppColors.darkRed,
-      'gpa': '3.8',
-    },
-    {
-      'name': 'Sarah Lee',
-      'role': 'UI/UX Designer',
-      'date': 'Jul 08, 2026',
-      'status': 'Shortlisted',
-      'color': AppColors.darkRedLight,
-      'gpa': '3.9',
-    },
-    {
-      'name': 'Mike Chen',
-      'role': 'Marketing Intern',
-      'date': 'Jul 05, 2026',
-      'status': 'Reviewing',
-      'color': AppColors.lightGray,
-      'gpa': '3.5',
-    },
-    {
-      'name': 'Emily Davis',
-      'role': 'Data Analyst',
-      'date': 'Jul 01, 2026',
-      'status': 'Rejected',
-      'color': AppColors.textSecondary,
-      'gpa': '3.2',
-    },
-  ];
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
       appBar: _buildAppBar(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSummaryStats(),
-            const SizedBox(height: 24),
-            _buildFilterTabs(),
-            const SizedBox(height: 16),
-            _buildApplicationsList(),
-            const SizedBox(height: 20),
-          ],
+      body: applicationsAsync.when(
+        loading: () => const LoadingWidget(message: 'Fetching applications...'),
+        error: (error, _) => ErrorStateWidget(
+          message: error.toString(),
+          onRetry: () => ref.invalidate(applicationsByStartupProvider(startupId)),
         ),
+        data: (applications) => _buildContent(context, applications),
       ),
     );
   }
@@ -95,41 +55,53 @@ class _ApplicationsReceivedScreenState extends ConsumerState<ApplicationsReceive
         style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
       ),
       centerTitle: true,
-      actions: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: GlassmorphicContainer(
-            blur: 10,
-            borderRadius: 12,
-            padding: const EdgeInsets.all(0),
-            child: IconButton(
-              icon: const Icon(Icons.filter_list, color: AppColors.white, size: 20),
-              onPressed: () {
-                // TODO: Open advanced filter modal
-              },
-            ),
-          ),
-        ),
-      ],
     );
   }
 
-  Widget _buildSummaryStats() {
+  Widget _buildContent(BuildContext context, List<Application> applications) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSummaryStats(applications),
+          const SizedBox(height: 24),
+          _buildSectionTitle('All Applications'),
+          const SizedBox(height: 16),
+          applications.isEmpty
+              ? const EmptyStateWidget(
+                  icon: Icons.inbox_outlined,
+                  title: 'No Applications Yet',
+                  description: 'When students apply to your opportunities, they will appear here.',
+                )
+              : _buildApplicationsList(applications),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryStats(List<Application> applications) {
+    final total = applications.length;
+    final pending = applications.where((a) => a.status == ApplicationStatus.pending || a.status == ApplicationStatus.reviewing).length;
+    final shortlisted = applications.where((a) => a.status == ApplicationStatus.interview).length;
+    final rejected = applications.where((a) => a.status == ApplicationStatus.rejected).length;
+
     return Column(
       children: [
         Row(
           children: [
-            Expanded(child: _buildStatCard('Total', '24', Icons.list_alt)),
+            Expanded(child: _buildStatCard('Total', '$total', Icons.list_alt)),
             const SizedBox(width: 12),
-            Expanded(child: _buildStatCard('New', '8', Icons.fiber_new)),
+            Expanded(child: _buildStatCard('Pending', '$pending', Icons.fiber_new)),
           ],
         ),
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _buildStatCard('Shortlisted', '6', Icons.star_outline)),
+            Expanded(child: _buildStatCard('Interview', '$shortlisted', Icons.star_outline)),
             const SizedBox(width: 12),
-            Expanded(child: _buildStatCard('Rejected', '10', Icons.cancel_outlined)),
+            Expanded(child: _buildStatCard('Rejected', '$rejected', Icons.cancel_outlined)),
           ],
         ),
       ],
@@ -147,7 +119,7 @@ class _ApplicationsReceivedScreenState extends ConsumerState<ApplicationsReceive
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.darkRed.withValues(alpha: 0.2),
+              color: AppColors.darkRed.withOpacity(0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: AppColors.darkRed, size: 20),
@@ -167,55 +139,23 @@ class _ApplicationsReceivedScreenState extends ConsumerState<ApplicationsReceive
     );
   }
 
-  Widget _buildFilterTabs() {
-    return SizedBox(
-      height: 40,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _filters.length,
-        itemBuilder: (context, index) {
-          final filter = _filters[index];
-          final isSelected = _selectedFilter == filter;
-          return Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedFilter = filter;
-                });
-                // TODO: Trigger provider to filter applications
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.darkRed : AppColors.glassWhite,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isSelected ? AppColors.darkRed : AppColors.borderGlass,
-                  ),
-                ),
-                child: Text(
-                  filter,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: isSelected ? AppColors.white : AppColors.textSecondary,
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
     );
   }
 
-  Widget _buildApplicationsList() {
-    // In a real app, we would filter _applications based on _selectedFilter
+  Widget _buildApplicationsList(List<Application> applications) {
     return Column(
-      children: _applications.map((app) => _buildApplicationCard(app)).toList(),
+      children: applications.map((app) => _buildApplicationCard(app)).toList(),
     );
   }
 
-  Widget _buildApplicationCard(Map<String, dynamic> app) {
+  Widget _buildApplicationCard(Application app) {
+    final statusColor = _getStatusColor(app.status);
+    final formattedDate = '${app.createdAt.day}/${app.createdAt.month}/${app.createdAt.year}';
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: GlassmorphicContainer(
@@ -228,10 +168,10 @@ class _ApplicationsReceivedScreenState extends ConsumerState<ApplicationsReceive
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: (app['color'] as Color).withValues(alpha: 0.2),
+                  backgroundColor: statusColor.withOpacity(0.2),
                   child: Text(
-                    (app['name'] as String).substring(0, 1),
-                    style: AppTextStyles.bodyLarge.copyWith(color: app['color'] as Color),
+                    app.studentName.substring(0, 1),
+                    style: AppTextStyles.bodyLarge.copyWith(color: statusColor),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -240,12 +180,12 @@ class _ApplicationsReceivedScreenState extends ConsumerState<ApplicationsReceive
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        app['name'] as String,
+                        app.studentName,
                         style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Applied for ${app['role']}',
+                        'Applied for ${app.opportunityTitle}',
                         style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                       ),
                     ],
@@ -254,13 +194,13 @@ class _ApplicationsReceivedScreenState extends ConsumerState<ApplicationsReceive
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: (app['color'] as Color).withValues(alpha: 0.2),
+                    color: statusColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    app['status'] as String,
+                    app.status.displayName,
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: app['color'] as Color,
+                      color: statusColor,
                       fontSize: 12,
                     ),
                   ),
@@ -275,17 +215,15 @@ class _ApplicationsReceivedScreenState extends ConsumerState<ApplicationsReceive
                 const Icon(Icons.school_outlined, color: AppColors.textSecondary, size: 14),
                 const SizedBox(width: 6),
                 Text(
-                  'GPA: ${app['gpa']}',
+                  app.studentEmail,
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
-                const SizedBox(width: 16),
-                const Icon(Icons.calendar_today, color: AppColors.textSecondary, size: 14),
-                const SizedBox(width: 6),
+                const Spacer(),
                 Text(
-                  app['date'] as String,
+                  formattedDate,
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.textSecondary,
                     fontSize: 12,
@@ -318,7 +256,7 @@ class _ApplicationsReceivedScreenState extends ConsumerState<ApplicationsReceive
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      // TODO: Trigger provider to shortlist or message
+                      // TODO: Trigger provider to shortlist
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.darkRed,
@@ -340,5 +278,19 @@ class _ApplicationsReceivedScreenState extends ConsumerState<ApplicationsReceive
         ),
       ),
     );
+  }
+
+  Color _getStatusColor(ApplicationStatus status) {
+    switch (status) {
+      case ApplicationStatus.pending:
+      case ApplicationStatus.reviewing:
+        return AppColors.textSecondary; 
+      case ApplicationStatus.interview:
+        return AppColors.darkRedLight; 
+      case ApplicationStatus.accepted:
+        return AppColors.darkRed; 
+      case ApplicationStatus.rejected:
+        return AppColors.textSecondary.withOpacity(0.5); 
+    }
   }
 }

@@ -28,7 +28,20 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
 
     await _firestore.collection(_collectionPath).add(model.toFirestore());
   }
-
+@override
+  Stream<List<Application>> getApplicationsByStartup(String startupId) {
+    return _firestore
+        .collection(_collectionPath)
+        .where('startupId', isEqualTo: startupId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => ApplicationModel.fromFirestore(doc).toEntity())
+          .toList();
+    });
+  }
+}
   @override
   Stream<List<Application>> getApplicationsByStudent(String studentId) {
     return _firestore

@@ -3,22 +3,14 @@ import 'package:alu_spark/features/applications/domain/entities/application.dart
 import 'package:alu_spark/shared/enums/application_status.dart';
 
 class ApplicationModel {
-  final String id;
-  final String opportunityId;
-  final String opportunityTitle;
-  final String startupName;
-  final String studentId;
-  final String studentName;
-  final String studentEmail;
-  final String motivation;
-  final String cvUrl;
-  final ApplicationStatus status;
-  final DateTime createdAt;
+  // ... (keep existing fields, add startupId)
+  final String startupId;
 
   ApplicationModel({
     required this.id,
     required this.opportunityId,
     required this.opportunityTitle,
+    required this.startupId, // Added
     required this.startupName,
     required this.studentId,
     required this.studentName,
@@ -35,6 +27,7 @@ class ApplicationModel {
       id: doc.id,
       opportunityId: data['opportunityId'] ?? '',
       opportunityTitle: data['opportunityTitle'] ?? '',
+      startupId: data['startupId'] ?? '', // Added
       startupName: data['startupName'] ?? '',
       studentId: data['studentId'] ?? '',
       studentName: data['studentName'] ?? '',
@@ -53,6 +46,7 @@ class ApplicationModel {
     return {
       'opportunityId': opportunityId,
       'opportunityTitle': opportunityTitle,
+      'startupId': startupId, // Added
       'startupName': startupName,
       'studentId': studentId,
       'studentName': studentName,
@@ -69,6 +63,7 @@ class ApplicationModel {
       id: id,
       opportunityId: opportunityId,
       opportunityTitle: opportunityTitle,
+      startupId: startupId, // Added
       startupName: startupName,
       studentId: studentId,
       studentName: studentName,

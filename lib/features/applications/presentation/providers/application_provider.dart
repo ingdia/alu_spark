@@ -7,3 +7,9 @@ final applicationsByStudentProvider = StreamProvider.family<List<Application>, S
   final repository = ref.watch(applicationRepositoryProvider);
   return repository.getApplicationsByStudent(studentId);
 });
+
+// Stream provider to fetch applications by startup ID (For Founders)
+final applicationsByStartupProvider = StreamProvider.family<List<Application>, String>((ref, startupId) {
+  final repository = ref.watch(applicationRepositoryProvider);
+  return repository.getApplicationsByStartup(startupId);
+});

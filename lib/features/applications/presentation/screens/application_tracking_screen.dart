@@ -22,7 +22,7 @@ class ApplicationTrackingScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
-      appBar: _buildAppBar(),
+      appBar: _buildAppBar(context),
       body: authState.when(
         loading: () => const LoadingWidget(message: 'Loading your profile...'),
         error: (error, _) => ErrorStateWidget(
@@ -54,7 +54,7 @@ class ApplicationTrackingScreen extends ConsumerWidget {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
