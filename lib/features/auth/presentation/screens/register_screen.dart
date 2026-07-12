@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_text_styles.dart';
-import '../../../../core/widgets/glassmorphism_container.dart';
-import 'otp_verification_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:alu_spark/app/theme/app_colors.dart';
+import 'package:alu_spark/app/theme/app_text_styles.dart';
+import 'package:alu_spark/app/router/app_router.dart';
+import 'package:alu_spark/core/widgets/alu_logo.dart';
+import 'package:alu_spark/features/auth/presentation/providers/auth_provider.dart';
+import 'package:alu_spark/features/auth/presentation/providers/auth_state.dart';
+import 'package:alu_spark/features/auth/presentation/widgets/auth_widgets.dart';
 
-class RegisterScreen extends StatefulWidget {
+class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  String _selectedRole = 'student'; // 'student' or 'founder'
 
   @override
   void dispose() {
@@ -25,219 +29,117 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  InputDecoration _inputDecoration(String hint, IconData icon) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
-      prefixIcon: Icon(icon, color: AppColors.textSecondary),
-      filled: true,
-      fillColor: Colors.white.withOpacity(0.05),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: AppColors.borderGlass, width: 1.5),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: AppColors.borderGlass, width: 1.5),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppColors.darkRed, width: 2),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-    );
+  void _onStateChange(AuthState? previous, AuthState next) {
+    if (next.status == AuthStatus.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(next.successMessage ?? '')),
+      );
+      ref.read(authNotifierProvider.notifier).reset();
+    } else if (next.status == AuthStatus.error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(next.errorMessage ?? 'An error occurred')),
+      );
+      ref.read(authNotifierProvider.notifier).reset();
+    }
+  }
+
+  void _handleRegister() {
+    if (!_formKey.currentState!.validate()) return;
+    ref.read(authNotifierProvider.notifier).register(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+          fullName: _nameController.text.trim(),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(authNotifierProvider, _onStateChange);
+    final isLoading = ref.watch(authNotifierProvider).isLoading;
+
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: AppColors.backgroundGradient,
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      backgroundColor: AppColors.darkBlue,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Back Button
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white),
-                ),
-                const SizedBox(height: 12),
-                
-                // Header
-                Text('Create Account', style: AppTextStyles.headingLarge),
+                const SizedBox(height: 40),
+                const Center(child: AluLogo()),
+                const SizedBox(height: 32),
+                Text('Create Account', style: AppTextStyles.headingLarge.copyWith(color: AppColors.white)),
                 const SizedBox(height: 8),
-                Text('Join the ALU startup ecosystem', style: AppTextStyles.bodyMedium),
+                Text('Join the ALU Spark community',
+                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                const SizedBox(height: 40),
+
+                AuthTextField(
+                  controller: _nameController,
+                  hintText: 'Full Name',
+                  prefixIcon: Icons.person_outline,
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Please enter your name' : null,
+                ),
+                const SizedBox(height: 16),
+
+                AuthTextField(
+                  controller: _emailController,
+                  hintText: 'Email Address',
+                  prefixIcon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return 'Please enter your email';
+                    if (!value.contains('@')) return 'Please enter a valid email';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                AuthTextField(
+                  controller: _passwordController,
+                  hintText: 'Password',
+                  prefixIcon: Icons.lock_outline,
+                  obscureText: true,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return 'Please enter your password';
+                    if (value.length < 6) return 'Password must be at least 6 characters';
+                    return null;
+                  },
+                ),
                 const SizedBox(height: 32),
 
-                // Glassmorphic Register Card
-                GlassmorphicContainer(
-                  blur: 15,
-                  borderRadius: 24,
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      TextField(
-                        controller: _nameController,
-                        style: AppTextStyles.bodyLarge,
-                        decoration: _inputDecoration('Full Name', Icons.person_outline),
-                      ),
-                      const SizedBox(height: 20),
-                      TextField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        style: AppTextStyles.bodyLarge,
-                        decoration: _inputDecoration('ALU Student Email', Icons.email_outlined),
-                      ),
-                      const SizedBox(height: 20),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        style: AppTextStyles.bodyLarge,
-                        decoration: _inputDecoration('Password', Icons.lock_outline),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Role Selection
-                      Text('I am a...', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _RoleCard(
-                              icon: Icons.school_outlined,
-                              label: 'Student',
-                              isSelected: _selectedRole == 'student',
-                              onTap: () => setState(() => _selectedRole = 'student'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _RoleCard(
-                              icon: Icons.rocket_launch_outlined,
-                              label: 'Founder',
-                              isSelected: _selectedRole == 'founder',
-                              onTap: () => setState(() => _selectedRole = 'founder'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Register Button
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          gradient: AppColors.redGradient,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.darkRed.withOpacity(0.4),
-                              blurRadius: 15,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => OtpVerificationScreen(
-                                  email: _emailController.text.isEmpty ? 'student@alu.ac.ke' : _emailController.text,
-                                ),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
-                          child: Text('Create Account', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w700)),
-                        ),
-                      ),
-                    ],
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : _handleRegister,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.darkRed,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 24, height: 24,
+                            child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2),
+                          )
+                        : Text('Create Account',
+                            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white)),
                   ),
                 ),
-
-                const SizedBox(height: 32),
-
-                // Login Link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text("Already have an account? ", style: AppTextStyles.bodyMedium),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Text(
-                        'Sign In',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 24),
+
+                AuthLinkRow(
+                  label: 'Already have an account? ',
+                  linkText: 'Log In',
+                  onTap: () => Navigator.pushNamed(context, RouteNames.login),
+                ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// Reusable Role Selection Card
-class _RoleCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _RoleCard({
-    required this.icon,
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.darkRed.withOpacity(0.2) : Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? AppColors.darkRed : AppColors.borderGlass,
-            width: 1.5,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: isSelected ? AppColors.darkRedLight : AppColors.textSecondary, size: 28),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: isSelected ? AppColors.white : AppColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-          ],
         ),
       ),
     );
