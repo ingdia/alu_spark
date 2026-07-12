@@ -4,13 +4,19 @@ import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/app/router/app_router.dart';
+import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/core/widgets/alu_logo.dart';
+import 'package:alu_spark/features/admin_analytics/presentation/providers/analytics_provider.dart';
+import 'package:alu_spark/features/admin_verification/presentation/providers/verification_provider.dart';
 
 class AdminHomeScreen extends ConsumerWidget {
   const AdminHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(platformStatsProvider);
+    final pendingAsync = ref.watch(pendingStartupsProvider);
+
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
       body: SafeArea(
@@ -19,9 +25,18 @@ class AdminHomeScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(),
+              _buildHeader(context, ref),
               const SizedBox(height: 24),
-              _buildPlatformStats(),
+              statsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator(color: AppColors.darkRed)),
+                error: (_, __) => _buildPlatformStatsStatic(),
+                data: (stats) => _buildPlatformStatsLive(
+                  students: stats.totalStudents,
+                  founders: stats.totalFounders,
+                  opportunities: stats.totalOpportunities,
+                  pending: pendingAsync.value?.length ?? 0,
+                ),
+              ),
               const SizedBox(height: 32),
               _buildSectionHeader('Admin Actions'),
               const SizedBox(height: 16),
@@ -38,38 +53,69 @@ class AdminHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context, WidgetRef ref) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         const AluLogo(size: 40),
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppColors.glassWhite,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.borderGlass),
+        GestureDetector(
+          onTap: () async {
+            await ref.read(authRepositoryProvider).signOut();
+            if (context.mounted) {
+              Navigator.of(context).pushAndRemoveUntil(
+                AppRouter.generateRoute(const RouteSettings(name: RouteNames.splash)),
+                (_) => false,
+              );
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.darkRed.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.darkRed.withValues(alpha: 0.4)),
+            ),
+            child: const Icon(Icons.logout, color: AppColors.darkRed, size: 24),
           ),
-          child: const Icon(Icons.notifications_outlined, color: AppColors.white, size: 24),
         ),
       ],
     );
   }
 
-  Widget _buildPlatformStats() {
+  Widget _buildPlatformStatsLive({required int students, required int founders, required int opportunities, required int pending}) {
     return Column(
       children: [
         Row(
           children: [
-            _buildStatCard('Students', '1,245', Icons.school_outlined),
-            _buildStatCard('Founders', '84', Icons.rocket_launch_outlined),
+            _buildStatCard('Students', '$students', Icons.school_outlined),
+            _buildStatCard('Founders', '$founders', Icons.rocket_launch_outlined),
           ],
         ),
         const SizedBox(height: 12),
         Row(
           children: [
-            _buildStatCard('Opportunities', '156', Icons.work_outline),
-            _buildStatCard('Pending', '7', Icons.hourglass_empty_outlined),
+            _buildStatCard('Opportunities', '$opportunities', Icons.work_outline),
+            _buildStatCard('Pending', '$pending', Icons.hourglass_empty_outlined),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlatformStatsStatic() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            _buildStatCard('Students', '—', Icons.school_outlined),
+            _buildStatCard('Founders', '—', Icons.rocket_launch_outlined),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _buildStatCard('Opportunities', '—', Icons.work_outline),
+            _buildStatCard('Pending', '—', Icons.hourglass_empty_outlined),
           ],
         ),
       ],

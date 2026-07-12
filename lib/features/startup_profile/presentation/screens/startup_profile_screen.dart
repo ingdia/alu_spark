@@ -8,16 +8,17 @@ import 'package:alu_spark/core/widgets/empty_state_widget.dart';
 import 'package:alu_spark/core/widgets/error_state_widget.dart';
 import 'package:alu_spark/features/startup_profile/presentation/providers/startup_provider.dart';
 import 'package:alu_spark/features/startup_profile/domain/entities/startup.dart';
+import 'package:alu_spark/app/router/app_router.dart';
+import 'package:alu_spark/core/providers/firebase_providers.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class StartupProfileScreen extends ConsumerWidget {
-  // TODO: Pass this dynamically via router arguments in the future
-  final String startupId = 'dummy_startup_id_123'; 
-
   const StartupProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final startupAsync = ref.watch(startupDetailProvider(startupId));
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final startupAsync = ref.watch(startupDetailProvider(uid));
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
@@ -25,7 +26,7 @@ class StartupProfileScreen extends ConsumerWidget {
         loading: () => const LoadingWidget(message: 'Loading startup profile...'),
         error: (error, _) => ErrorStateWidget(
           message: error.toString(),
-          onRetry: () => ref.invalidate(startupDetailProvider(startupId)),
+          onRetry: () => ref.invalidate(startupDetailProvider(uid)),
         ),
         data: (startup) {
           if (startup == null) {
@@ -35,13 +36,13 @@ class StartupProfileScreen extends ConsumerWidget {
               description: 'This startup profile does not exist or has been removed.',
             );
           }
-          return _buildContent(context, startup);
+          return _buildContent(context, ref, startup);
         },
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context, Startup startup) {
+  Widget _buildContent(BuildContext context, WidgetRef ref, Startup startup) {
     return CustomScrollView(
       slivers: [
         SliverAppBar(
@@ -113,10 +114,49 @@ class StartupProfileScreen extends ConsumerWidget {
                 _buildSectionTitle('About Us'),
                 const SizedBox(height: 12),
                 _buildAboutSection(startup.description),
+                if (startup.website.isNotEmpty || startup.linkedin.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Links'),
+                  const SizedBox(height: 12),
+                  _buildLinks(startup),
+                ],
                 const SizedBox(height: 24),
                 _buildSectionTitle('Our Team'),
                 const SizedBox(height: 12),
                 _buildTeamMembers(startup.teamMembers),
+                const SizedBox(height: 24),
+                GestureDetector(
+                  onTap: () async {
+                    await ref.read(authRepositoryProvider).signOut();
+                    if (context.mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        AppRouter.generateRoute(const RouteSettings(name: RouteNames.splash)),
+                        (_) => false,
+                      );
+                    }
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.darkRed.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.darkRed.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.logout, color: AppColors.darkRed, size: 20),
+                        const SizedBox(width: 10),
+                        Text('Log Out',
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              color: AppColors.darkRed,
+                              fontWeight: FontWeight.w600,
+                            )),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 80),
               ],
             ),
@@ -130,9 +170,9 @@ class StartupProfileScreen extends ConsumerWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _buildStatItem('Team', '${startup.teamMembers.length}'),
+        _buildStatItem('Team', startup.teamSize.isNotEmpty ? startup.teamSize : '${startup.teamMembers.length}'),
         const SizedBox(width: 12),
-        _buildStatItem('Founded', '${startup.createdAt.year}'),
+        _buildStatItem('Stage', startup.stage.isNotEmpty ? startup.stage : '—'),
         const SizedBox(width: 12),
         _buildStatItem('Open Roles', '${startup.openRolesCount}'),
       ],
@@ -158,6 +198,43 @@ class StartupProfileScreen extends ConsumerWidget {
 
   Widget _buildSectionTitle(String title) {
     return Text(title, style: AppTextStyles.headingMedium.copyWith(color: AppColors.white));
+  }
+
+  Widget _buildLinks(Startup startup) {
+    return Column(
+      children: [
+        if (startup.website.isNotEmpty)
+          _buildLinkTile(Icons.language_rounded, 'Website', startup.website),
+        if (startup.linkedin.isNotEmpty)
+          _buildLinkTile(Icons.link_rounded, 'LinkedIn', startup.linkedin),
+      ],
+    );
+  }
+
+  Widget _buildLinkTile(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GlassmorphicContainer(
+        blur: 10,
+        borderRadius: 12,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.darkRed, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary, fontSize: 11)),
+                  Text(value, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white), overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildAboutSection(String description) {

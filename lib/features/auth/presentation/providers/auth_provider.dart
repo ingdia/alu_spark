@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/features/auth/presentation/providers/auth_state.dart';
@@ -58,7 +59,8 @@ class AuthNotifier extends Notifier<AuthState> {
     required String teamSize,
     required List<Map<String, String>> founders,
     required String description,
-    required String proofFilePath,
+    String? proofFilePath,
+    List<int>? proofFileBytes,
     required String proofFileName,
   }) async {
     state = state.copyWith(status: AuthStatus.loading);
@@ -74,13 +76,16 @@ class AuthNotifier extends Notifier<AuthState> {
             founders: founders,
             description: description,
             proofFilePath: proofFilePath,
+            proofFileBytes: proofFileBytes,
             proofFileName: proofFileName,
           );
       state = state.copyWith(
         status: AuthStatus.success,
         successMessage: 'Startup profile submitted for review!',
       );
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('registerStartup ERROR: $e');
+      debugPrint('STACKTRACE: $st');
       state = state.copyWith(
         status: AuthStatus.error,
         errorMessage: e.toString().replaceFirst('Exception: ', ''),

@@ -1,7 +1,6 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:alu_spark/core/services/firebase_auth_service.dart';
 import 'package:alu_spark/features/auth/domain/entities/user.dart';
 import 'package:alu_spark/features/auth/domain/repositories/auth_repository.dart';
@@ -10,16 +9,13 @@ import 'package:alu_spark/shared/enums/user_role.dart';
 class AuthRepositoryImpl implements AuthRepository {
   final FirebaseAuthService _authService;
   final FirebaseFirestore _firestore;
-  final FirebaseStorage _storage;
 
   static const String _adminEmail = 'ngabirediane02@gmail.com';
 
   AuthRepositoryImpl({
     required this._authService,
     FirebaseFirestore? firestore,
-    FirebaseStorage? storage,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _storage = storage ?? FirebaseStorage.instance;
+  }) : _firestore = firestore ?? FirebaseFirestore.instance;
 
   @override
   Stream<User?> get authStateChanges {
@@ -67,6 +63,7 @@ class AuthRepositoryImpl implements AuthRepository {
       'createdAt': FieldValue.serverTimestamp(),
       'isEmailVerified': false,
       'isApproved': isStartup ? false : true,
+      'profileComplete': false,
     });
 
     return newUser;
@@ -79,7 +76,15 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     await _authService.signInWithEmail(email: email, password: password);
     final firebaseUser = _authService.currentUser!;
-    return _fetchUser(firebaseUser);
+    await firebaseUser.reload();
+    final refreshed = firebase_auth.FirebaseAuth.instance.currentUser!;
+    final isAdmin = refreshed.email?.trim().toLowerCase() == _adminEmail.toLowerCase();
+    if (!isAdmin && !refreshed.emailVerified) {
+      await _authService.signOut();
+      throw Exception('Please verify your email before logging in.');
+    }
+    await refreshed.getIdToken(true);
+    return _fetchUser(refreshed);
   }
 
   @override
@@ -93,16 +98,17 @@ class AuthRepositoryImpl implements AuthRepository {
     required String teamSize,
     required List<Map<String, String>> founders,
     required String description,
-    required String proofFilePath,
+    String? proofFilePath,
+    List<int>? proofFileBytes,
     required String proofFileName,
   }) async {
     final uid = _authService.currentUser?.uid;
     if (uid == null) throw Exception('User not authenticated');
 
-    final ext = proofFileName.split('.').last;
-    final storageRef = _storage.ref('startup_proofs/$uid/proof.$ext');
-    await storageRef.putFile(File(proofFilePath));
-    final proofUrl = await storageRef.getDownloadURL();
+    debugPrint('submitStartupProfile: uid=$uid');
+
+    await _authService.currentUser?.getIdToken(true);
+    debugPrint('submitStartupProfile: token refreshed, writing to Firestore');
 
     await _firestore.collection('startups').doc(uid).set({
       'uid': uid,
@@ -115,28 +121,34 @@ class AuthRepositoryImpl implements AuthRepository {
       'teamSize': teamSize,
       'founders': founders,
       'description': description,
-      'proofDocumentUrl': proofUrl,
       'proofFileName': proofFileName,
       'status': 'pending',
       'submittedAt': FieldValue.serverTimestamp(),
       'adminEmail': _adminEmail,
     });
 
+    debugPrint('submitStartupProfile: startups doc written');
+
     await _firestore.collection('users').doc(uid).update({
       'startupProfileStatus': 'pending',
       'startupName': startupName,
+      'profileComplete': true,
     });
+
+    debugPrint('submitStartupProfile: users doc updated');
 
     await _firestore.collection('admin_notifications').add({
       'type': 'startup_review',
       'startupId': uid,
       'startupName': startupName,
       'submittedBy': _authService.currentUser?.email ?? '',
-      'proofDocumentUrl': proofUrl,
+      'proofFileName': proofFileName,
       'adminEmail': _adminEmail,
       'status': 'unread',
       'createdAt': FieldValue.serverTimestamp(),
     });
+
+    debugPrint('submitStartupProfile: admin_notification written — DONE');
   }
 
   @override
@@ -144,7 +156,6 @@ class AuthRepositoryImpl implements AuthRepository {
     await _authService.signOut();
   }
 
-  // Fetch full user with role from Firestore
   Future<User> _fetchUser(firebase_auth.User firebaseUser) async {
     try {
       final doc = await _firestore.collection('users').doc(firebaseUser.uid).get();
@@ -165,7 +176,6 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
     } catch (_) {}
-    // Fallback if Firestore doc missing
     return _mapToUserBasic(firebaseUser);
   }
 
@@ -175,7 +185,6 @@ class AuthRepositoryImpl implements AuthRepository {
     return UserRole.student;
   }
 
-  // Basic mapping without Firestore (used only as fallback)
   User _mapToUserBasic(firebase_auth.User firebaseUser) {
     return User(
       id: firebaseUser.uid,

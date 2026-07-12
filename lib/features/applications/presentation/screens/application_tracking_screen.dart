@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
@@ -6,7 +7,6 @@ import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/core/widgets/loading_widget.dart';
 import 'package:alu_spark/core/widgets/empty_state_widget.dart';
 import 'package:alu_spark/core/widgets/error_state_widget.dart';
-import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/features/applications/presentation/providers/application_provider.dart';
 import 'package:alu_spark/features/applications/domain/entities/application.dart';
 import 'package:alu_spark/shared/enums/application_status.dart';
@@ -16,37 +16,19 @@ class ApplicationTrackingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
+    final userId = fb.FirebaseAuth.instance.currentUser?.uid ?? '';
+    final applicationsAsync = ref.watch(applicationsByStudentProvider(userId));
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
       appBar: _buildAppBar(context),
-      body: authState.when(
-        loading: () => const LoadingWidget(message: 'Loading...'),
+      body: applicationsAsync.when(
+        loading: () => const LoadingWidget(message: 'Fetching applications...'),
         error: (error, _) => ErrorStateWidget(
-          message: 'Failed to load user data.',
-          onRetry: () => ref.invalidate(authStateProvider),
+          message: 'Failed to load applications.',
+          onRetry: () => ref.invalidate(applicationsByStudentProvider(userId)),
         ),
-        data: (user) {
-          if (user == null) {
-            return const EmptyStateWidget(
-              icon: Icons.lock_outline,
-              title: 'Not Logged In',
-              description: 'Please log in to track your applications.',
-            );
-          }
-
-          final applicationsAsync = ref.watch(applicationsByStudentProvider(user.id));
-
-          return applicationsAsync.when(
-            loading: () => const LoadingWidget(message: 'Fetching applications...'),
-            error: (error, _) => ErrorStateWidget(
-              message: 'Failed to load applications.',
-              onRetry: () => ref.invalidate(applicationsByStudentProvider(user.id)),
-            ),
-            data: (applications) => _buildContent(context, applications),
-          );
-        },
+        data: (applications) => _buildContent(context, applications),
       ),
     );
   }

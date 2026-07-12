@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:alu_spark/app/router/app_router.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
@@ -60,9 +61,7 @@ class DiscoverScreen extends ConsumerWidget {
 
   Widget _buildSearchBar(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        // TODO: Navigate to search screen
-      },
+      onTap: () => Navigator.of(context).pushNamed(RouteNames.search),
       child: GlassmorphicContainer(
         blur: 10,
         borderRadius: 16,

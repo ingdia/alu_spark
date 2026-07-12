@@ -1,63 +1,132 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_text_styles.dart';
-import '../../../../core/widgets/glassmorphism_container.dart';
-import 'package:alu_spark/features/home/presentation/screens/home_shell.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:alu_spark/app/router/app_router.dart';
+import 'package:alu_spark/app/theme/app_colors.dart';
+import 'package:alu_spark/app/theme/app_text_styles.dart';
+import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String email;
-  
-  const OtpVerificationScreen({super.key, required this.email});
+  final String name;
+
+  const OtpVerificationScreen({
+    super.key,
+    required this.email,
+    required this.name,
+  });
 
   @override
   State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
 }
 
 class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
-  final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
-  final List<TextEditingController> _controllers = List.generate(4, (_) => TextEditingController());
-  
-  int _timerSeconds = 30;
+  bool _isChecking = false;
+  bool _isResending = false;
   bool _canResend = false;
+  int _timerSeconds = 60;
   Timer? _timer;
+  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
     _startTimer();
-    // Auto-focus the first box when the screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      FocusScope.of(context).requestFocus(_focusNodes[0]);
-    });
-  }
-
-  void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_timerSeconds > 0) {
-        setState(() => _timerSeconds--);
-      } else {
-        setState(() {
-          _canResend = true;
-          _timer?.cancel();
-        });
-      }
-    });
+    _startPolling();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    for (var controller in _controllers) { controller.dispose(); }
-    for (var node in _focusNodes) { node.dispose(); }
+    _pollTimer?.cancel();
     super.dispose();
   }
 
+  void _startTimer() {
+    _timer?.cancel();
+    setState(() { _timerSeconds = 60; _canResend = false; });
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (_timerSeconds > 0) {
+        setState(() => _timerSeconds--);
+      } else {
+        setState(() => _canResend = true);
+        t.cancel();
+      }
+    });
+  }
+
+  void _startPolling() {
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      await _checkVerification(silent: true);
+    });
+  }
+
+  Future<void> _checkVerification({bool silent = false}) async {
+    if (!silent) setState(() => _isChecking = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      await user.reload();
+      final fresh = FirebaseAuth.instance.currentUser;
+      if (fresh != null && fresh.emailVerified) {
+        // Force-refresh the ID token so Firestore sees email_verified = true
+        await fresh.getIdToken(true);
+        _pollTimer?.cancel();
+        _timer?.cancel();
+        if (mounted) _goToProfileSetup();
+      } else if (!silent && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Email not verified yet. Please check your inbox.'),
+          backgroundColor: AppColors.darkRed,
+        ));
+      }
+    } catch (_) {
+    } finally {
+      if (!silent && mounted) setState(() => _isChecking = false);
+    }
+  }
+
+  void _goToProfileSetup() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .update({'isEmailVerified': true});
+    }
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      RouteNames.roleSelection,
+      (_) => false,
+    );
+  }
+
+  Future<void> _resendEmail() async {
+    setState(() => _isResending = true);
+    try {
+      await FirebaseAuth.instance.currentUser?.sendEmailVerification();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Verification email resent!')),
+        );
+      }
+      _startTimer();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to resend: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isResending = false);
+    }
+  }
+
   String get _timerText {
-    int minutes = _timerSeconds ~/ 60;
-    int seconds = _timerSeconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    final m = _timerSeconds ~/ 60;
+    final s = _timerSeconds % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -66,106 +135,80 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: AppColors.backgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Back Button
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white),
-                ),
                 const SizedBox(height: 12),
-                
-                // Header
-                Text('Verify Email', style: AppTextStyles.headingLarge),
+                Text('Verify Your Email', style: AppTextStyles.headingLarge),
                 const SizedBox(height: 8),
                 RichText(
                   text: TextSpan(
                     style: AppTextStyles.bodyMedium,
                     children: [
-                      const TextSpan(text: 'Enter the 4-digit code sent to\n'),
+                      const TextSpan(text: 'A verification link was sent to\n'),
                       TextSpan(
-                        text: widget.email.isEmpty ? 'your@alu.ac.ke' : widget.email,
-                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white, fontWeight: FontWeight.w600),
+                        text: widget.email,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
+                      const TextSpan(text: '\n\nClick the link in your email, then tap the button below.'),
                     ],
                   ),
                 ),
                 const SizedBox(height: 40),
-
-                // Glassmorphic OTP Card
                 GlassmorphicContainer(
                   blur: 15,
                   borderRadius: 24,
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
-                      // OTP Input Boxes
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: List.generate(4, (index) => _buildOtpBox(index)),
-                      ),
+                      const Icon(Icons.mark_email_unread_outlined, color: AppColors.darkRed, size: 64),
+                      const SizedBox(height: 16),
+                      Text('Check your inbox',
+                          style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
                       const SizedBox(height: 32),
-
-                      // Verify Button
-                      Container(
+                      SizedBox(
                         width: double.infinity,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          gradient: AppColors.redGradient,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.darkRed.withValues(alpha: 0.4),
-                              blurRadius: 15,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
+                        height: 52,
                         child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(builder: (_) => const HomeShell()),
-                              (route) => false,
-                            );
-                          },
+                          onPressed: _isChecking ? null : () => _checkVerification(),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            backgroundColor: AppColors.darkRed,
+                            disabledBackgroundColor: AppColors.glassWhite,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 0,
                           ),
-                          child: Text('Verify & Continue', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w700)),
+                          child: _isChecking
+                              ? const SizedBox(width: 22, height: 22,
+                                  child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2))
+                              : Text("I've Verified My Email",
+                                  style: AppTextStyles.bodyLarge.copyWith(
+                                    color: AppColors.white, fontWeight: FontWeight.w700)),
                         ),
                       ),
                       const SizedBox(height: 24),
-
-                      // Resend Timer
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text("Didn't receive code? ", style: AppTextStyles.bodyMedium),
+                          Text("Didn't receive it? ", style: AppTextStyles.bodyMedium),
                           GestureDetector(
-                            onTap: _canResend ? () {
-                              setState(() {
-                                _canResend = false;
-                                _timerSeconds = 30;
-                                _startTimer();
-                              });
-                            } : null,
-                            child: Text(
-                              _canResend ? 'Resend Code' : 'Resend in $_timerText',
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: _canResend ? AppColors.darkRedLight : AppColors.textSecondary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                            onTap: (_canResend && !_isResending) ? _resendEmail : null,
+                            child: _isResending
+                                ? const SizedBox(width: 16, height: 16,
+                                    child: CircularProgressIndicator(color: AppColors.darkRed, strokeWidth: 2))
+                                : Text(
+                                    _canResend ? 'Resend Email' : 'Resend in $_timerText',
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      color: _canResend ? AppColors.darkRedLight : AppColors.textSecondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                           ),
                         ],
                       ),
@@ -176,50 +219,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  // Custom OTP Input Box
-  Widget _buildOtpBox(int index) {
-    return SizedBox(
-      width: 60,
-      height: 70,
-      child: TextField(
-        controller: _controllers[index],
-        focusNode: _focusNodes[index],
-        textAlign: TextAlign.center,
-        keyboardType: TextInputType.number,
-        maxLength: 1,
-        style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
-        cursorColor: AppColors.darkRed,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        decoration: InputDecoration(
-          counterText: '',
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: AppColors.borderGlass, width: 1.5),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: AppColors.borderGlass, width: 1.5),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: AppColors.darkRed, width: 2),
-          ),
-          filled: true,
-          fillColor: Colors.white.withValues(alpha: 0.05),
-          contentPadding: EdgeInsets.zero,
-        ),
-        // Auto-advance focus logic
-        onChanged: (value) {
-          if (value.isNotEmpty && index < 3) {
-            FocusScope.of(context).requestFocus(_focusNodes[index + 1]);
-          } else if (value.isEmpty && index > 0) {
-            FocusScope.of(context).requestFocus(_focusNodes[index - 1]);
-          }
-        },
       ),
     );
   }

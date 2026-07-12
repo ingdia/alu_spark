@@ -1,0 +1,113 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'ngabirediane02@gmail.com' ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        )
+      );
+    }
+
+    function isVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true || isAdmin());
+    }
+
+    // ── Users ─────────────────────────────────────────────────────────────────
+    // Any authenticated user can read their own doc.
+    // Write allowed on own doc (create on signup before email verified, update after).
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── Students ──────────────────────────────────────────────────────────────
+    match /students/{uid} {
+      allow read: if isVerified();
+      allow write: if isOwner(uid) && isVerified();
+    }
+
+    // ── Startups ──────────────────────────────────────────────────────────────
+    match /startups/{uid} {
+      allow read: if isVerified();
+      allow create: if isOwner(uid) && isVerified();
+      allow update: if isOwner(uid) && isVerified() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── Opportunities ─────────────────────────────────────────────────────────
+    match /opportunities/{oppId} {
+      allow read: if isVerified();
+      allow create: if isVerified() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'founder';
+      allow update: if isVerified() && (
+        resource.data.postedBy == request.auth.uid ||
+        isAdmin() ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['applicationsCount'])
+      );
+      allow delete: if isVerified() &&
+        resource.data.postedBy == request.auth.uid || isAdmin();
+    }
+
+    // ── Applications ──────────────────────────────────────────────────────────
+    match /applications/{appId} {
+      allow read: if isVerified() && (
+        resource.data.studentId == request.auth.uid ||
+        resource.data.startupId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isVerified() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student';
+      allow update: if isVerified() && (
+        resource.data.startupId == request.auth.uid || isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // ── Bookmarks ─────────────────────────────────────────────────────────────
+    match /bookmarks/{uid}/opportunities/{oppId} {
+      allow read, write: if isOwner(uid) && isVerified();
+    }
+
+    // ── Messages / Chats ──────────────────────────────────────────────────────
+    match /chats/{chatId} {
+      allow read, write: if isVerified() &&
+        request.auth.uid in resource.data.participants;
+
+      match /messages/{msgId} {
+        allow read: if isVerified() &&
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        allow create: if isVerified() &&
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      }
+    }
+
+    // ── Notifications ─────────────────────────────────────────────────────────
+    match /notifications/{uid}/items/{notifId} {
+      allow read, write: if isOwner(uid) && isVerified();
+    }
+
+    // ── Admin notifications ───────────────────────────────────────────────────
+    match /admin_notifications/{docId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if isAdmin() || (
+        isVerified() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'founder'
+      );
+    }
+  }
+}

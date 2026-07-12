@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
+import 'package:alu_spark/core/providers/repository_providers.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
+import 'package:alu_spark/features/student_profile/domain/entities/student.dart';
+import 'package:alu_spark/features/student_profile/presentation/providers/student_profile_provider.dart';
 
 class StudentProfileEditScreen extends ConsumerStatefulWidget {
   const StudentProfileEditScreen({super.key});
@@ -12,24 +16,75 @@ class StudentProfileEditScreen extends ConsumerStatefulWidget {
 }
 
 class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'Alex Johnson');
-  final _majorController = TextEditingController(text: 'Software Engineering');
-  final _universityController = TextEditingController(text: 'African Leadership University');
-  final _bioController = TextEditingController(text: 'Passionate software engineering student with a keen interest in mobile development and UI/UX design.');
+  final _nameController = TextEditingController();
+  final _majorController = TextEditingController();
+  final _universityController = TextEditingController();
+  final _bioController = TextEditingController();
   final _skillInputController = TextEditingController();
-  
-  final List<String> _skills = ['Flutter', 'Dart', 'Python', 'UI/UX Design', 'Firebase'];
-  
-  // Using final for lists to align with project conventions
-  final List<Map<String, String>> _education = [
-    {'degree': 'BSc in Software Engineering', 'institution': 'African Leadership University', 'period': '2023 - 2027'},
-  ];
-  
-  final List<Map<String, String>> _experience = [
-    {'role': 'UI/UX Design Intern', 'company': 'TechStart', 'period': 'Jun 2025 - Present'},
-    {'role': 'Frontend Developer', 'company': 'DesignHub', 'period': 'Jan 2025 - May 2025'},
-  ];
+
+  List<String> _skills = [];
+  List<Map<String, String>> _education = [];
+  List<Map<String, String>> _experience = [];
+
+  bool _loading = true;
+  bool _saving = false;
+  String? _uid;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    _uid = fb.FirebaseAuth.instance.currentUser?.uid;
+    if (_uid == null) return;
+    final student = await ref.read(studentRepositoryProvider).getStudent(_uid!);
+    if (student != null && mounted) {
+      _nameController.text = student.fullName;
+      _majorController.text = student.major;
+      _universityController.text = student.university;
+      _bioController.text = student.bio;
+      setState(() {
+        _skills = List.from(student.skills);
+        _education = student.education.map((e) => Map<String, String>.from(e)).toList();
+        _experience = student.experience.map((e) => Map<String, String>.from(e)).toList();
+        _loading = false;
+      });
+    } else {
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _save() async {
+    if (_uid == null) return;
+    setState(() => _saving = true);
+    try {
+      await fb.FirebaseAuth.instance.currentUser?.getIdToken(true);
+      final student = Student(
+        id: _uid!,
+        fullName: _nameController.text.trim(),
+        email: fb.FirebaseAuth.instance.currentUser?.email ?? '',
+        university: _universityController.text.trim(),
+        major: _majorController.text.trim(),
+        bio: _bioController.text.trim(),
+        skills: _skills,
+        education: _education,
+        experience: _experience,
+      );
+      await ref.read(studentRepositoryProvider).saveStudent(student);
+      ref.invalidate(studentProfileProvider(_uid!));
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.darkRed),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -43,110 +98,117 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        backgroundColor: AppColors.darkBlue,
+        body: Center(child: CircularProgressIndicator(color: AppColors.darkRed)),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
-      appBar: _buildAppBar(),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('Basic Information'),
-              const SizedBox(height: 16),
-              _buildGlassTextField(controller: _nameController, hintText: 'Full Name', prefixIcon: Icons.person_outline),
-              const SizedBox(height: 16),
-              _buildGlassTextField(controller: _majorController, hintText: 'Major', prefixIcon: Icons.school_outlined),
-              const SizedBox(height: 16),
-              _buildGlassTextField(controller: _universityController, hintText: 'University', prefixIcon: Icons.account_balance_outlined),
-              const SizedBox(height: 32),
-
-              _buildSectionTitle('About Me'),
-              const SizedBox(height: 16),
-              _buildGlassTextField(controller: _bioController, hintText: 'Tell us about yourself...', prefixIcon: Icons.info_outline, maxLines: 4),
-              const SizedBox(height: 32),
-
-              _buildSectionTitle('Skills'),
-              const SizedBox(height: 16),
-              _buildSkillsEditor(),
-              const SizedBox(height: 32),
-
-              _buildSectionTitle('Education'),
-              const SizedBox(height: 16),
-              _buildEducationEditor(),
-              const SizedBox(height: 32),
-
-              _buildSectionTitle('Experience'),
-              const SizedBox(height: 16),
-              _buildExperienceEditor(),
-              const SizedBox(height: 40),
-
-              _buildSaveButton(),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      leading: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GlassmorphicContainer(
-          blur: 10,
-          borderRadius: 12,
-          padding: const EdgeInsets.all(0),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 18),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ),
-      ),
-      title: Text(
-        'Edit Profile',
-        style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
-      ),
-      centerTitle: true,
-      actions: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
           child: GlassmorphicContainer(
             blur: 10,
             borderRadius: 12,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-            child: TextButton(
-              onPressed: () {
-                // TODO: Trigger provider to save profile
-              },
-              child: Text(
-                'Save',
-                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
-              ),
+            padding: EdgeInsets.zero,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 16),
+              onPressed: () => Navigator.of(context).pop(),
             ),
           ),
         ),
-      ],
+        title: Text('Edit Profile', style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
+        centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: GlassmorphicContainer(
+              blur: 10,
+              borderRadius: 12,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextButton(
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2))
+                    : Text('Save', style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white)),
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionTitle('Basic Information'),
+            const SizedBox(height: 16),
+            _glassField(_nameController, 'Full Name', Icons.person_outline),
+            const SizedBox(height: 12),
+            _glassField(_majorController, 'Major', Icons.school_outlined),
+            const SizedBox(height: 12),
+            _glassField(_universityController, 'University', Icons.account_balance_outlined),
+            const SizedBox(height: 28),
+            _sectionTitle('About Me'),
+            const SizedBox(height: 16),
+            _glassField(_bioController, 'Tell us about yourself...', Icons.info_outline, maxLines: 4),
+            const SizedBox(height: 28),
+            _sectionTitle('Skills'),
+            const SizedBox(height: 16),
+            _buildSkillsEditor(),
+            const SizedBox(height: 28),
+            _sectionTitle('Education'),
+            const SizedBox(height: 16),
+            _buildListEditor(
+              items: _education,
+              titleKey: 'degree',
+              subtitleKey: 'institution',
+              onAdd: () => setState(() => _education.add({'degree': '', 'institution': '', 'period': ''})),
+              onRemove: (i) => setState(() => _education.removeAt(i)),
+              addLabel: 'Add Education',
+            ),
+            const SizedBox(height: 28),
+            _sectionTitle('Experience'),
+            const SizedBox(height: 16),
+            _buildListEditor(
+              items: _experience,
+              titleKey: 'role',
+              subtitleKey: 'company',
+              onAdd: () => setState(() => _experience.add({'role': '', 'company': '', 'period': ''})),
+              onRemove: (i) => setState(() => _experience.removeAt(i)),
+              addLabel: 'Add Experience',
+            ),
+            const SizedBox(height: 40),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _saving ? null : _save,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.darkRed,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                child: _saving
+                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2))
+                    : Text('Save Changes', style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white, fontWeight: FontWeight.w700)),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
-    );
-  }
+  Widget _sectionTitle(String title) => Text(title, style: AppTextStyles.headingMedium.copyWith(color: AppColors.white));
 
-  Widget _buildGlassTextField({
-    required TextEditingController controller,
-    required String hintText,
-    IconData? prefixIcon,
-    int maxLines = 1,
-  }) {
+  Widget _glassField(TextEditingController controller, String hint, IconData icon, {int maxLines = 1}) {
     return GlassmorphicContainer(
       blur: 10,
       borderRadius: 12,
@@ -156,9 +218,9 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
         maxLines: maxLines,
         style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
         decoration: InputDecoration(
-          hintText: hintText,
+          hintText: hint,
           hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
-          prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: AppColors.darkRed) : null,
+          prefixIcon: Icon(icon, color: AppColors.darkRed),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 16),
         ),
@@ -170,11 +232,11 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _skills.map((skill) {
-            return Container(
+        if (_skills.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _skills.map((skill) => Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: AppColors.glassWhite,
@@ -184,22 +246,16 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    skill,
-                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
-                  ),
+                  Text(skill, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white)),
                   const SizedBox(width: 8),
                   GestureDetector(
-                    onTap: () {
-                      setState(() => _skills.remove(skill));
-                    },
+                    onTap: () => setState(() => _skills.remove(skill)),
                     child: const Icon(Icons.close, color: AppColors.textSecondary, size: 16),
                   ),
                 ],
               ),
-            );
-          }).toList(),
-        ),
+            )).toList(),
+          ),
         const SizedBox(height: 12),
         GlassmorphicContainer(
           blur: 10,
@@ -212,7 +268,7 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
                   controller: _skillInputController,
                   style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
                   decoration: InputDecoration(
-                    hintText: 'Add a new skill...',
+                    hintText: 'Add a skill...',
                     hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 16),
@@ -220,10 +276,7 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
                   onSubmitted: (_) => _addSkill(),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.add_circle_outline, color: AppColors.darkRed),
-                onPressed: _addSkill,
-              ),
+              IconButton(icon: const Icon(Icons.add_circle_outline, color: AppColors.darkRed), onPressed: _addSkill),
             ],
           ),
         ),
@@ -232,74 +285,61 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
   }
 
   void _addSkill() {
-    if (_skillInputController.text.trim().isNotEmpty) {
-      setState(() {
-        _skills.add(_skillInputController.text.trim());
-        _skillInputController.clear();
-      });
+    final s = _skillInputController.text.trim();
+    if (s.isNotEmpty && !_skills.contains(s)) {
+      setState(() => _skills.add(s));
+      _skillInputController.clear();
     }
   }
 
-  Widget _buildEducationEditor() {
+  Widget _buildListEditor({
+    required List<Map<String, String>> items,
+    required String titleKey,
+    required String subtitleKey,
+    required VoidCallback onAdd,
+    required void Function(int) onRemove,
+    required String addLabel,
+  }) {
     return Column(
       children: [
-        ..._education.asMap().entries.map((entry) {
-          final index = entry.key;
-          final edu = entry.value;
+        ...items.asMap().entries.map((entry) {
+          final i = entry.key;
+          final item = entry.value;
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: GlassmorphicContainer(
               blur: 10,
-              borderRadius: 16,
-              padding: const EdgeInsets.all(16),
-              child: Row(
+              borderRadius: 14,
+              padding: const EdgeInsets.all(14),
+              child: Column(
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(edu['degree']!, style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white)),
-                        const SizedBox(height: 4),
-                        Text(edu['institution']!, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
-                        const SizedBox(height: 4),
-                        Text(edu['period']!, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: AppColors.darkRed, size: 20),
-                    onPressed: () {
-                      setState(() => _education.removeAt(index));
-                    },
+                  _inlineField(item, titleKey, titleKey == 'degree' ? 'Degree / Certificate' : 'Role / Position'),
+                  const SizedBox(height: 8),
+                  _inlineField(item, subtitleKey, subtitleKey == 'institution' ? 'Institution' : 'Company'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(child: _inlineField(item, 'period', 'Period (e.g. 2023 - 2025)')),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, color: AppColors.darkRed, size: 20),
+                        onPressed: () => onRemove(i),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
           );
         }),
-        const SizedBox(height: 8),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: () {
-              setState(() {
-                _education.add({
-                  'degree': 'New Degree',
-                  'institution': 'New Institution',
-                  'period': '202X - 202X',
-                });
-              });
-            },
+            onPressed: onAdd,
             icon: const Icon(Icons.add, color: AppColors.white),
-            label: Text(
-              'Add Education',
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
-            ),
+            label: Text(addLabel, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white)),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: AppColors.borderGlass),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
           ),
@@ -308,94 +348,19 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
     );
   }
 
-  Widget _buildExperienceEditor() {
-    return Column(
-      children: [
-        ..._experience.asMap().entries.map((entry) {
-          final index = entry.key;
-          final exp = entry.value;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: GlassmorphicContainer(
-              blur: 10,
-              borderRadius: 16,
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(exp['role']!, style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white)),
-                        const SizedBox(height: 4),
-                        Text(exp['company']!, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
-                        const SizedBox(height: 4),
-                        Text(exp['period']!, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: AppColors.darkRed, size: 20),
-                    onPressed: () {
-                      setState(() => _experience.removeAt(index));
-                    },
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () {
-              setState(() {
-                _experience.add({
-                  'role': 'New Role',
-                  'company': 'New Company',
-                  'period': '202X - Present',
-                });
-              });
-            },
-            icon: const Icon(Icons.add, color: AppColors.white),
-            label: Text(
-              'Add Experience',
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
-            ),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.borderGlass),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSaveButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
-        onPressed: () {
-          // TODO: Trigger provider to save profile
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.darkRed,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 0,
-        ),
-        child: Text(
-          'Save Changes',
-          style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
-        ),
+  Widget _inlineField(Map<String, String> map, String key, String hint) {
+    return TextField(
+      controller: TextEditingController(text: map[key])
+        ..addListener(() {}),
+      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white, fontSize: 13),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary, fontSize: 12),
+        border: InputBorder.none,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(vertical: 4),
       ),
+      onChanged: (v) => map[key] = v,
     );
   }
 }

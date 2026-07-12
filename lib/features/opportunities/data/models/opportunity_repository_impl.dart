@@ -15,12 +15,11 @@ class OpportunityRepositoryImpl implements OpportunityRepository {
     return _firestore
         .collection(_collectionPath)
         .where('isActive', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => OpportunityModel.fromFirestore(doc).toEntity())
-          .toList();
+      final l = snapshot.docs.map((doc) => OpportunityModel.fromFirestore(doc).toEntity()).toList();
+      l.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return l;
     });
   }
 
@@ -30,12 +29,11 @@ class OpportunityRepositoryImpl implements OpportunityRepository {
         .collection(_collectionPath)
         .where('isActive', isEqualTo: true)
         .where('category', isEqualTo: category)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => OpportunityModel.fromFirestore(doc).toEntity())
-          .toList();
+      final l = snapshot.docs.map((doc) => OpportunityModel.fromFirestore(doc).toEntity()).toList();
+      l.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return l;
     });
   }
 

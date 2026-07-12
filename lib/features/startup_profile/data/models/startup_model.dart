@@ -13,6 +13,10 @@ class StartupModel {
   final int openRolesCount;
   final bool isVerified;
   final DateTime createdAt;
+  final String website;
+  final String linkedin;
+  final String stage;
+  final String teamSize;
 
   StartupModel({
     required this.id,
@@ -26,22 +30,38 @@ class StartupModel {
     required this.openRolesCount,
     required this.isVerified,
     required this.createdAt,
+    this.website = '',
+    this.linkedin = '',
+    this.stage = '',
+    this.teamSize = '',
   });
 
   factory StartupModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    final rawMembers = data['founders'] ?? data['teamMembers'] ?? [];
+    final members = (rawMembers as List).map((e) {
+      if (e is Map) return Map<String, String>.from(e.map((k, v) => MapEntry(k.toString(), v.toString())));
+      return <String, String>{};
+    }).toList();
+
     return StartupModel(
       id: doc.id,
-      name: data['name'] ?? '',
+      name: data['startupName'] ?? data['name'] ?? '',
       tagline: data['tagline'] ?? '',
       industry: data['industry'] ?? '',
       description: data['description'] ?? '',
-      founderId: data['founderId'] ?? '',
+      founderId: data['uid'] ?? data['founderId'] ?? '',
       founderName: data['founderName'] ?? '',
-      teamMembers: List<Map<String, String>>.from(data['teamMembers'] ?? []),
+      teamMembers: members,
       openRolesCount: data['openRolesCount'] ?? 0,
-      isVerified: data['isVerified'] ?? false,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      isVerified: data['status'] == 'approved' || (data['isVerified'] ?? false),
+      createdAt: (data['submittedAt'] as Timestamp?)?.toDate() ??
+          (data['createdAt'] as Timestamp?)?.toDate() ??
+          DateTime.now(),
+      website: data['website'] ?? '',
+      linkedin: data['linkedin'] ?? '',
+      stage: data['stage'] ?? '',
+      teamSize: data['teamSize'] ?? '',
     );
   }
 
@@ -73,6 +93,10 @@ class StartupModel {
       openRolesCount: openRolesCount,
       isVerified: isVerified,
       createdAt: createdAt,
+      website: website,
+      linkedin: linkedin,
+      stage: stage,
+      teamSize: teamSize,
     );
   }
 }

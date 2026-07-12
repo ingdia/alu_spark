@@ -12,9 +12,17 @@ final _pendingStartupsProvider = StreamProvider<List<Map<String, dynamic>>>((ref
   return FirebaseFirestore.instance
       .collection('startups')
       .where('status', isEqualTo: 'pending')
-      .orderBy('createdAt', descending: true)
       .snapshots()
-      .map((s) => s.docs.map((d) => {'id': d.id, ...d.data()}).toList());
+      .map((s) {
+        final list = s.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+        list.sort((a, b) {
+          final aTime = a['submittedAt'];
+          final bTime = b['submittedAt'];
+          if (aTime == null || bTime == null) return 0;
+          return (bTime as Timestamp).compareTo(aTime as Timestamp);
+        });
+        return list;
+      });
 });
 
 class AdminVerificationScreen extends ConsumerWidget {
@@ -102,7 +110,7 @@ class AdminVerificationScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        startup['name'] ?? 'Unnamed Startup',
+                        startup['startupName'] ?? startup['name'] ?? 'Unnamed Startup',
                         style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
                       ),
                       const SizedBox(height: 4),
@@ -196,16 +204,39 @@ class AdminVerificationScreen extends ConsumerWidget {
   }
 
   Future<void> _updateStatus(BuildContext context, String id, String status) async {
-    await FirebaseFirestore.instance
-        .collection('startups')
-        .doc(id)
-        .update({'status': status});
+    final batch = FirebaseFirestore.instance.batch();
+
+    batch.update(
+      FirebaseFirestore.instance.collection('startups').doc(id),
+      {'status': status},
+    );
+
+    // Also update the user's approval flag so they can access the platform
+    batch.update(
+      FirebaseFirestore.instance.collection('users').doc(id),
+      {
+        'isApproved': status == 'approved',
+        'startupProfileStatus': status,
+      },
+    );
+
+    await batch.commit();
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Startup ${status == 'approved' ? 'approved' : 'rejected'}.'),
-          backgroundColor: AppColors.darkRed,
+          content: Row(children: [
+            Icon(
+              status == 'approved' ? Icons.check_circle_outline : Icons.cancel_outlined,
+              color: Colors.white, size: 18,
+            ),
+            const SizedBox(width: 10),
+            Text('Startup ${status == 'approved' ? 'approved ✓' : 'rejected'}.'),
+          ]),
+          backgroundColor: status == 'approved' ? const Color(0xFF1B5E20) : AppColors.darkRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
         ),
       );
     }

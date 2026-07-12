@@ -1,12 +1,17 @@
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/app/router/app_router.dart';
+import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/core/utils/responsive_utils.dart';
 import 'package:alu_spark/features/opportunities/presentation/providers/opportunity_provider.dart';
 import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
+import 'package:alu_spark/features/applications/presentation/providers/application_provider.dart';
+import 'package:alu_spark/features/bookmarks/presentation/providers/bookmark_provider.dart';
+import 'package:alu_spark/shared/enums/application_status.dart';
 
 class StudentHomeScreen extends ConsumerWidget {
   const StudentHomeScreen({super.key});
@@ -16,6 +21,9 @@ class StudentHomeScreen extends ConsumerWidget {
     final featuredAsync = ref.watch(featuredOpportunitiesProvider);
     final recentAsync = ref.watch(recentOpportunitiesProvider);
     final horizontalPadding = ResponsiveUtils.getResponsivePadding(context);
+    final currentUser = ref.watch(authStateProvider).value;
+    final userId = fb.FirebaseAuth.instance.currentUser?.uid ?? '';
+    final displayName = currentUser?.fullName ?? 'Student';
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
@@ -34,11 +42,11 @@ class StudentHomeScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 24),
-                      _buildHeader(context),
+                      _buildHeader(context, displayName),
                       const SizedBox(height: 20),
                       _buildSearchBar(context),
                       const SizedBox(height: 24),
-                      _buildQuickStats(context, 0),
+                      _buildQuickStats(context, ref, userId),
                       const SizedBox(height: 28),
                       _buildSectionHeader(context, 'Featured Opportunities'),
                       const SizedBox(height: 12),
@@ -59,7 +67,7 @@ class StudentHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, String displayName) {
     return Row(
       children: [
         Stack(
@@ -112,7 +120,7 @@ class StudentHomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                'Alex Johnson',
+                displayName,
                 style: AppTextStyles.headingMedium.copyWith(
                   fontSize: 19,
                   letterSpacing: -0.4,
@@ -189,14 +197,27 @@ class StudentHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickStats(BuildContext context, int appliedCount) {
+  Widget _buildQuickStats(BuildContext context, WidgetRef ref, String userId) {
+    final applicationsAsync = ref.watch(applicationsByStudentProvider(userId));
+    final bookmarksAsync = ref.watch(bookmarksProvider(userId));
+
+    final appliedCount = applicationsAsync.value?.length ?? 0;
+    final savedCount = bookmarksAsync.value?.length ?? 0;
+    final interviewCount = applicationsAsync.value
+            ?.where((a) => a.status == ApplicationStatus.interview)
+            .length ??
+        0;
+
     return Row(
       children: [
-        Expanded(child: _StatCard(label: 'Applied', value: '$appliedCount', icon: Icons.send_rounded, accent: AppColors.darkRed)),
+        Expanded(child: GestureDetector(
+          onTap: () => Navigator.of(context).pushNamed(RouteNames.applicationTracking),
+          child: _StatCard(label: 'Applied', value: '$appliedCount', icon: Icons.send_rounded, accent: AppColors.darkRed),
+        )),
         const SizedBox(width: 10),
-        const Expanded(child: _StatCard(label: 'Saved', value: '12', icon: Icons.bookmark_rounded, accent: Color(0xFF6366F1))),
+        Expanded(child: _StatCard(label: 'Saved', value: '$savedCount', icon: Icons.bookmark_rounded, accent: Color(0xFF6366F1))),
         const SizedBox(width: 10),
-        const Expanded(child: _StatCard(label: 'Interviews', value: '2', icon: Icons.calendar_month_rounded, accent: Color(0xFF22C55E))),
+        Expanded(child: _StatCard(label: 'Interviews', value: '$interviewCount', icon: Icons.calendar_month_rounded, accent: Color(0xFF22C55E))),
       ],
     );
   }
@@ -245,13 +266,19 @@ class StudentHomeScreen extends ConsumerWidget {
             final o = list[index];
             return Padding(
               padding: EdgeInsets.only(right: index < list.length - 1 ? 12 : 0),
-              child: _FeaturedCard(
-                width: cardWidth,
-                title: o.title,
-                startup: o.startupName,
-                location: o.location,
-                type: o.type,
-                bgImage: 'assets/images/featured_${(index % 2) + 1}.jpg',
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pushNamed(
+                  RouteNames.opportunityDetail,
+                  arguments: o,
+                ),
+                child: _FeaturedCard(
+                  width: cardWidth,
+                  title: o.title,
+                  startup: o.startupName,
+                  location: o.location,
+                  type: o.type,
+                  bgImage: 'assets/images/featured_${(index % 2) + 1}.jpg',
+                ),
               ),
             );
           },
@@ -265,12 +292,18 @@ class StudentHomeScreen extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator(color: AppColors.darkRed)),
       error: (e, _) => Center(child: Text('$e', style: const TextStyle(color: Colors.red))),
       data: (list) => Column(
-        children: list.map((o) => _RecentOpportunityCard(
-          title: o.title,
-          startup: o.startupName,
-          location: o.location,
-          type: o.type,
-          postedDays: DateTime.now().difference(o.createdAt).inDays,
+        children: list.map((o) => GestureDetector(
+          onTap: () => Navigator.of(context).pushNamed(
+            RouteNames.opportunityDetail,
+            arguments: o,
+          ),
+          child: _RecentOpportunityCard(
+            title: o.title,
+            startup: o.startupName,
+            location: o.location,
+            type: o.type,
+            postedDays: DateTime.now().difference(o.createdAt).inDays,
+          ),
         )).toList(),
       ),
     );

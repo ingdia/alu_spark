@@ -15,10 +15,9 @@ class MessageRepositoryImpl implements MessageRepository {
     return _firestore
         .collection(_conversationsPath)
         .where('participantIds', arrayContains: userId)
-        .orderBy('lastMessageTime', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
+      final list = snapshot.docs.map((doc) {
         final data = doc.data();
         return Conversation(
           id: doc.id,
@@ -29,6 +28,8 @@ class MessageRepositoryImpl implements MessageRepository {
           participantName: data['participantName'] ?? 'Unknown',
         );
       }).toList();
+      list.sort((a, b) => b.lastMessageTime.compareTo(a.lastMessageTime));
+      return list;
     });
   }
 

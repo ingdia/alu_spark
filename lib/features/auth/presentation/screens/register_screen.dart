@@ -36,27 +36,55 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     try {
       final authRepository = ref.read(authRepositoryProvider);
       
+      final email = _emailController.text.trim();
       await authRepository.signUpWithEmail(
-        email: _emailController.text.trim(),
+        email: email,
         password: _passwordController.text.trim(),
         fullName: _nameController.text.trim(),
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account created successfully!')),
+        _showToast('Account created! Please verify your email.');
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          RouteNames.otpVerification,
+          (_) => false,
+          arguments: {'name': _nameController.text.trim(), 'email': email},
         );
-        Navigator.of(context).pushNamed(RouteNames.otpVerification);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-        );
+        _showToast(e.toString().replaceFirst('Exception: ', ''), isError: true);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showToast(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline : Icons.check_circle_outline,
+              color: AppColors.white,
+              size: 18,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(message,
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white)),
+            ),
+          ],
+        ),
+        backgroundColor: isError ? AppColors.darkRed : const Color(0xFF1B5E20),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   @override

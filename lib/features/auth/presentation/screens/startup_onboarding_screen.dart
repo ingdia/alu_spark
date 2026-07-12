@@ -39,6 +39,7 @@ class _StartupOnboardingScreenState
   // Step 3 — Proof document
   PlatformFile? _proofFile;
   final _descController = TextEditingController();
+  String? _proofError;
 
   static const _industries = [
     'Technology', 'FinTech', 'HealthTech', 'EdTech',
@@ -66,13 +67,26 @@ class _StartupOnboardingScreenState
       ref.read(authNotifierProvider.notifier).reset();
       _showSuccessDialog();
     } else if (next.status == AuthStatus.error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(next.errorMessage ?? 'An error occurred'),
-          backgroundColor: AppColors.darkRed,
+      final msg = next.errorMessage ?? 'An error occurred. Please try again.';
+      ref.read(authNotifierProvider.notifier).reset();
+      // Show error in a dialog so it can't be missed
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: AppColors.darkBlueLight,
+          title: Text('Submission Failed',
+              style: AppTextStyles.headingMedium.copyWith(fontSize: 16)),
+          content: Text(msg,
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('OK',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed)),
+            ),
+          ],
         ),
       );
-      ref.read(authNotifierProvider.notifier).reset();
     }
   }
 
@@ -126,14 +140,14 @@ class _StartupOnboardingScreenState
                 height: 48,
                 child: GestureDetector(
                   onTap: () => Navigator.pushNamedAndRemoveUntil(
-                    context, RouteNames.login, (_) => false),
+                    context, RouteNames.startupPending, (_) => false),
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: AppColors.redGradient,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
-                      child: Text('Back to Login',
+                      child: Text('View Status',
                           style: AppTextStyles.bodyLarge.copyWith(
                             color: AppColors.white,
                             fontWeight: FontWeight.w700,
@@ -175,40 +189,61 @@ class _StartupOnboardingScreenState
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+      withData: true, // ensures bytes are always available
     );
-    if (result != null) setState(() => _proofFile = result.files.first);
+    if (result != null) {
+      setState(() {
+        _proofFile = result.files.first;
+        _proofError = null;
+      });
+    }
   }
 
   void _submit() {
-    if (_proofFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please upload a proof document'),
-          backgroundColor: AppColors.darkRed,
-        ),
-      );
-      return;
-    }
-
     ref.read(authNotifierProvider.notifier).registerStartup(
-          startupName: _startupNameController.text.trim(),
-          tagline: _startupTaglineController.text.trim(),
-          website: _websiteController.text.trim(),
-          linkedin: _linkedinController.text.trim(),
-          industry: _selectedIndustry,
-          stage: _selectedStage,
-          teamSize: _selectedSize,
-          founders: _founders
-              .map((f) => {
-                    'name': f.nameController.text.trim(),
-                    'role': f.roleController.text.trim(),
-                    'email': f.emailController.text.trim(),
-                  })
-              .toList(),
-          description: _descController.text.trim(),
-          proofFilePath: _proofFile!.path!,
-          proofFileName: _proofFile!.name,
-        );
+      startupName: _startupNameController.text.trim(),
+      tagline: _startupTaglineController.text.trim(),
+      website: _websiteController.text.trim(),
+      linkedin: _linkedinController.text.trim(),
+      industry: _selectedIndustry,
+      stage: _selectedStage,
+      teamSize: _selectedSize,
+      founders: _founders
+          .map((f) => {
+                'name': f.nameController.text.trim(),
+                'role': f.roleController.text.trim(),
+                'email': f.emailController.text.trim(),
+              })
+          .toList(),
+      description: _descController.text.trim(),
+      proofFilePath: _proofFile?.path,
+      proofFileBytes: _proofFile?.bytes,
+      proofFileName: _proofFile?.name ?? '',
+    );
+  }
+
+  void _showToast(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline : Icons.check_circle_outline,
+              color: AppColors.white,
+              size: 18,
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white))),
+          ],
+        ),
+        backgroundColor: isError ? AppColors.darkRed : const Color(0xFF1B5E20),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
@@ -490,7 +525,7 @@ class _StartupOnboardingScreenState
           ),
           const SizedBox(height: 20),
 
-          Text('Proof Document *',
+          Text('Proof Document (optional)',
               style: AppTextStyles.bodyLarge.copyWith(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
@@ -518,8 +553,12 @@ class _StartupOnboardingScreenState
                     : AppColors.glassWhite,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: _proofFile != null ? AppColors.darkRed : AppColors.borderGlass,
-                  width: _proofFile != null ? 1.5 : 1,
+                  color: _proofError != null
+                      ? AppColors.darkRed
+                      : _proofFile != null
+                          ? AppColors.darkRed
+                          : AppColors.borderGlass,
+                  width: (_proofFile != null || _proofError != null) ? 1.5 : 1,
                 ),
               ),
               child: Column(
@@ -553,6 +592,18 @@ class _StartupOnboardingScreenState
               ),
             ),
           ),
+          if (_proofError != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.error_outline, color: AppColors.darkRed, size: 14),
+                const SizedBox(width: 6),
+                Text(_proofError!,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.darkRed, fontSize: 12)),
+              ],
+            ),
+          ],
           const SizedBox(height: 20),
 
           GlassmorphicContainer(
