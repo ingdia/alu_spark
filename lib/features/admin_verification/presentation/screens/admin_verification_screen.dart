@@ -139,7 +139,7 @@ class _AdminVerificationScreenState extends ConsumerState<AdminVerificationScree
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.darkRed.withOpacity(0.2),
+              color: AppColors.darkRed.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: AppColors.darkRed, size: 20),
@@ -222,7 +222,7 @@ class _AdminVerificationScreenState extends ConsumerState<AdminVerificationScree
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: (v['color'] as Color).withOpacity(0.2),
+                    color: (v['color'] as Color).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.business, color: v['color'] as Color, size: 28),
@@ -247,7 +247,7 @@ class _AdminVerificationScreenState extends ConsumerState<AdminVerificationScree
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: (v['color'] as Color).withOpacity(0.2),
+                    color: (v['color'] as Color).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(

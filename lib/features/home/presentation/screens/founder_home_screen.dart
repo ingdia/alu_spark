@@ -4,6 +4,7 @@ import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/features/applications/presentation/providers/application_provider.dart';
+import 'package:alu_spark/core/widgets/alu_logo.dart';
 
 class FounderHomeScreen extends ConsumerWidget {
   const FounderHomeScreen({super.key});
@@ -43,16 +44,7 @@ class FounderHomeScreen extends ConsumerWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Welcome back,',
-                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
-            const SizedBox(height: 4),
-            Text('TechStart Team',
-                style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
-          ],
-        ),
+        const AluLogo(size: 40),
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -137,7 +129,7 @@ class FounderHomeScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: app.statusColor.withOpacity(0.2),
+                    color: app.statusColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(

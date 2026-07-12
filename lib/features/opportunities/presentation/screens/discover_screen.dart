@@ -1,254 +1,171 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_text_styles.dart';
-import '../providers/opportunity_provider.dart';
-import '../widgets/opportunity_card.dart';
+import 'package:alu_spark/app/theme/app_colors.dart';
+import 'package:alu_spark/app/theme/app_text_styles.dart';
+import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
+import 'package:alu_spark/core/widgets/shimmer_loading.dart';
+import 'package:alu_spark/core/widgets/error_state_widget.dart';
+import 'package:alu_spark/features/opportunities/presentation/providers/opportunity_provider.dart';
+import 'package:alu_spark/features/opportunities/presentation/widgets/opportunity_card.dart';
+import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 
 class DiscoverScreen extends ConsumerWidget {
   const DiscoverScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(opportunityProvider);
+    // Watch the real-time streams from Firestore
+    final featuredAsync = ref.watch(featuredOpportunitiesProvider);
+    final recentAsync = ref.watch(recentOpportunitiesProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.darkBlue,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Hello, Alex 👋', style: AppTextStyles.bodyMedium),
-                        const SizedBox(height: 4),
-                        Text('Find your next big role', style: AppTextStyles.headingMedium),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.borderGlass),
-                      ),
-                      child: Stack(
-                        children: [
-                          const Icon(Icons.notifications_outlined, color: AppColors.white, size: 24),
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              width: 10,
-                              height: 10,
-                              decoration: const BoxDecoration(
-                                color: AppColors.darkRed,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 8)),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 24),
+              _buildSearchBar(context),
+              const SizedBox(height: 32),
+              
+              // Featured Section
+              _buildSectionHeader('Featured Opportunities'),
+              const SizedBox(height: 16),
+              _buildFeaturedList(context, featuredAsync),
+              
+              const SizedBox(height: 32),
+              
+              // Recent Section
+              _buildSectionHeader('Recent Opportunities'),
+              const SizedBox(height: 16),
+              _buildRecentList(context, recentAsync, ref),
+              
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-            // Category chips
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 40,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: state.categories.length,
-                    itemBuilder: (context, index) {
-                      final isSelected = state.selectedCategoryIndex == index;
-                      return GestureDetector(
-                        onTap: () => ref
-                            .read(opportunityProvider.notifier)
-                            .selectCategory(index),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.only(right: 12),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppColors.darkRed : Colors.white.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSelected ? AppColors.darkRed : AppColors.borderGlass,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              state.categories[index],
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: isSelected ? AppColors.white : AppColors.textSecondary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+  Widget _buildHeader(BuildContext context) {
+    return Text(
+      'Discover',
+      style: AppTextStyles.headingLarge.copyWith(color: AppColors.white),
+    );
+  }
 
-            // Featured
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverToBoxAdapter(
-                child: Text('Featured Opportunities',
-                    style: AppTextStyles.headingMedium.copyWith(fontSize: 18)),
-              ),
+  Widget _buildSearchBar(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        // TODO: Navigate to search screen
+      },
+      child: GlassmorphicContainer(
+        blur: 10,
+        borderRadius: 16,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            const Icon(Icons.search, color: AppColors.textSecondary, size: 24),
+            const SizedBox(width: 12),
+            Text(
+              'Search opportunities...',
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
-            SliverPadding(
-              padding: const EdgeInsets.only(left: 20),
-              sliver: SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 180,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: state.featured.length,
-                    itemBuilder: (context, index) =>
-                        _FeaturedCard(data: state.featured[index]),
-                  ),
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-            // Recent
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverToBoxAdapter(
-                child: Text('Recent Opportunities',
-                    style: AppTextStyles.headingMedium.copyWith(fontSize: 18)),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final item = state.filteredRecent[index];
-                    return OpportunityCard(
-                      title: item['title'],
-                      startup: item['startup'],
-                      location: item['location'],
-                      type: item['type'],
-                      logo: item['logo'],
-                      postedDays: item['postedDays'],
-                    );
-                  },
-                  childCount: state.filteredRecent.length,
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
       ),
     );
   }
-}
 
-class _FeaturedCard extends StatelessWidget {
-  final Map<String, dynamic> data;
-  const _FeaturedCard({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = data['color'] as Color;
-    return Container(
-      width: 260,
-      margin: const EdgeInsets.only(right: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [color.withOpacity(0.8), color.withOpacity(0.4)],
+  Widget _buildSectionHeader(String title) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
         ),
-        border: Border.all(color: AppColors.borderGlass, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+        TextButton(
+          onPressed: () {},
+          child: Text('See All', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed)),
+        ),
+      ],
+    );
+  }
+
+  // Featured Horizontal List with Async Handling
+  Widget _buildFeaturedList(BuildContext context, AsyncValue<List<Opportunity>> asyncValue) {
+    return SizedBox(
+      height: 220,
+      child: asyncValue.when(
+        loading: () => ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: 3,
+          itemBuilder: (_, __) => const Padding(
+            padding: EdgeInsets.only(right: 16),
+            child: SizedBox(width: 280, child: OpportunityCardShimmer()),
           ),
-        ],
+        ),
+        error: (error, _) => Center(child: Text('Error: $error', style: TextStyle(color: Colors.red))),
+        data: (opportunities) {
+          if (opportunities.isEmpty) {
+            return const Center(child: Text('No featured opportunities yet.'));
+          }
+          // Show first 3 for featured
+          final featured = opportunities.take(3).toList();
+          return ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: featured.length,
+            itemBuilder: (context, index) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.75,
+                  child: OpportunityCard(opportunity: featured[index]),
+                ),
+              );
+            },
+          );
+        },
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(data['logo'], color: AppColors.white, size: 28),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  data['type'],
-                  style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(data['title'],
-                  style: AppTextStyles.headingMedium
-                      .copyWith(fontSize: 18, color: AppColors.white)),
-              const SizedBox(height: 8),
-              Row(children: [
-                const Icon(Icons.business_rounded, color: AppColors.white, size: 16),
-                const SizedBox(width: 4),
-                Text(data['startup'],
-                    style: AppTextStyles.bodyMedium
-                        .copyWith(color: AppColors.white.withOpacity(0.9))),
-              ]),
-              const SizedBox(height: 4),
-              Row(children: [
-                const Icon(Icons.location_on_outlined, color: AppColors.white, size: 16),
-                const SizedBox(width: 4),
-                Text(data['location'],
-                    style: AppTextStyles.bodyMedium
-                        .copyWith(color: AppColors.white.withOpacity(0.9))),
-              ]),
-            ],
-          ),
-        ],
+    );
+  }
+
+  // Recent Vertical List with Async Handling
+  Widget _buildRecentList(BuildContext context, AsyncValue<List<Opportunity>> asyncValue, WidgetRef ref) {
+    return asyncValue.when(
+      loading: () => Column(
+        children: List.generate(3, (_) => const Padding(
+          padding: EdgeInsets.only(bottom: 16),
+          child: OpportunityCardShimmer(),
+        )),
       ),
+      error: (error, stack) => ErrorStateWidget(
+        message: error.toString(),
+        onRetry: () => ref.invalidate(recentOpportunitiesProvider),
+      ),
+      data: (opportunities) {
+        if (opportunities.isEmpty) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: Text('No recent opportunities found.'),
+            ),
+          );
+        }
+        return Column(
+          children: opportunities.map((opportunity) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: OpportunityCard(opportunity: opportunity),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }

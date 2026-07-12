@@ -196,7 +196,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
               Stack(
                 children: [
                   CircleAvatar(
-                    backgroundColor: (conv['color'] as Color).withOpacity(0.2),
+                    backgroundColor: (conv['color'] as Color).withValues(alpha: 0.2),
                     child: Text(
                       (conv['name'] as String).substring(0, 1),
                       style: AppTextStyles.headingMedium.copyWith(color: conv['color'] as Color),

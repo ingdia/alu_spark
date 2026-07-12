@@ -1,25 +1,34 @@
 import 'package:alu_spark/features/auth/domain/entities/user.dart';
 
 abstract class AuthRepository {
-  // Stream to listen to auth state changes (logged in or logged out)
   Stream<User?> get authStateChanges;
-  
-  // Get the currently logged-in user
   User? get currentUser;
-  
-  // Sign up with email and password
+
   Future<User> signUpWithEmail({
     required String email,
     required String password,
     required String fullName,
+    bool isStartup = false,
   });
-  
-  // Sign in with email and password
+
   Future<User> signInWithEmail({
     required String email,
     required String password,
   });
-  
-  // Sign out
+
+  Future<void> submitStartupProfile({
+    required String startupName,
+    required String tagline,
+    required String website,
+    required String linkedin,
+    required String industry,
+    required String stage,
+    required String teamSize,
+    required List<Map<String, String>> founders,
+    required String description,
+    required String proofFilePath,
+    required String proofFileName,
+  });
+
   Future<void> signOut();
 }

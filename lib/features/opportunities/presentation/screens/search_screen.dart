@@ -52,14 +52,7 @@ class SearchScreen extends ConsumerWidget {
                     const SizedBox(height: 12),
                     ...state.results.map((o) => Padding(
                           padding: const EdgeInsets.only(bottom: 16),
-                          child: OpportunityCard(
-                            title: o['title'],
-                            startup: o['startup'],
-                            location: o['location'],
-                            type: o['type'],
-                            logo: o['logo'],
-                            postedDays: o['postedDays'],
-                          ),
+                          child: OpportunityCard(opportunity: o),
                         )),
                     const SizedBox(height: 20),
                   ],

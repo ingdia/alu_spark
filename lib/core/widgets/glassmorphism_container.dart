@@ -22,16 +22,16 @@ class GlassmorphicContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: margin,
-      padding: padding,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
           child: Container(
+            padding: padding,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft, end: Alignment.bottomRight,
-                colors: [AppColors.glassWhite, AppColors.glassWhite.withOpacity(0.05)],
+                colors: [AppColors.glassWhite, AppColors.glassWhite.withValues(alpha: 0.05)],
               ),
               borderRadius: BorderRadius.circular(borderRadius),
               border: Border.all(color: AppColors.borderGlass, width: 1.5),

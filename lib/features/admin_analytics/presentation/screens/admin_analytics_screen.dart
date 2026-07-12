@@ -94,7 +94,7 @@ class AdminAnalyticsScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.darkRed.withOpacity(0.2),
+              color: AppColors.darkRed.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: AppColors.darkRed, size: 20),
@@ -169,7 +169,7 @@ class AdminAnalyticsScreen extends ConsumerWidget {
                               end: Alignment.bottomCenter,
                               colors: [
                                 AppColors.darkRed,
-                                AppColors.darkRed.withOpacity(0.3),
+                                AppColors.darkRed.withValues(alpha: 0.3),
                               ],
                             ),
                             borderRadius: const BorderRadius.vertical(
@@ -271,7 +271,7 @@ class AdminAnalyticsScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.darkRed.withOpacity(0.2),
+                    color: AppColors.darkRed.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(act['icon'] as IconData, color: AppColors.darkRed, size: 20),

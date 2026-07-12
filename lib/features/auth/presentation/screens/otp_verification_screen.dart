@@ -49,8 +49,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-    for (var controller in _controllers) controller.dispose();
-    for (var node in _focusNodes) node.dispose();
+    for (var controller in _controllers) { controller.dispose(); }
+    for (var node in _focusNodes) { node.dispose(); }
     super.dispose();
   }
 
@@ -121,7 +121,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           gradient: AppColors.redGradient,
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.darkRed.withOpacity(0.4),
+                              color: AppColors.darkRed.withValues(alpha: 0.4),
                               blurRadius: 15,
                               offset: const Offset(0, 8),
                             ),
@@ -209,7 +209,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             borderSide: const BorderSide(color: AppColors.darkRed, width: 2),
           ),
           filled: true,
-          fillColor: Colors.white.withOpacity(0.05),
+          fillColor: Colors.white.withValues(alpha: 0.05),
           contentPadding: EdgeInsets.zero,
         ),
         // Auto-advance focus logic

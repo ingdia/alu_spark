@@ -4,6 +4,8 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../shared/enums/user_role.dart';
+import '../../../../core/providers/firebase_providers.dart';
+import '../../../../app/router/app_router.dart';
 
 // Student screens
 import 'student_home_screen.dart';
@@ -108,13 +110,53 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           children: [
             Text('Switch Role', style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
             const SizedBox(height: 8),
-            Text('Demo only — simulates different user types', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+            Text('Demo only — simulates different user types',
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
             const SizedBox(height: 24),
-            _buildRoleOption(context, UserRole.student, 'Student', Icons.school_outlined, 'Browse & apply to opportunities', currentRole),
+            _buildRoleOption(context, UserRole.student, 'Student', Icons.school_outlined,
+                'Browse & apply to opportunities', currentRole),
             const SizedBox(height: 12),
-            _buildRoleOption(context, UserRole.founder, 'Founder', Icons.rocket_launch_outlined, 'Post opportunities & manage applications', currentRole),
+            _buildRoleOption(context, UserRole.founder, 'Founder', Icons.rocket_launch_outlined,
+                'Post opportunities & manage applications', currentRole),
             const SizedBox(height: 12),
-            _buildRoleOption(context, UserRole.admin, 'Admin', Icons.admin_panel_settings_outlined, 'Verify startups & manage platform', currentRole),
+            _buildRoleOption(context, UserRole.admin, 'Admin', Icons.admin_panel_settings_outlined,
+                'Verify startups & manage platform', currentRole),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () async {
+                Navigator.pop(context);
+                await ref.read(authRepositoryProvider).signOut();
+                if (context.mounted) {
+                  Navigator.pushNamedAndRemoveUntil(context, RouteNames.login, (_) => false);
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.darkRed.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.darkRed.withValues(alpha: 0.4), width: 1.5),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.darkRed.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.logout, color: AppColors.darkRed, size: 24),
+                    ),
+                    const SizedBox(width: 16),
+                    Text('Log Out',
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          color: AppColors.darkRed,
+                          fontWeight: FontWeight.w600,
+                        )),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 16),
           ],
         ),
@@ -122,7 +164,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     );
   }
 
-  Widget _buildRoleOption(BuildContext context, UserRole role, String label, IconData icon, String description, UserRole currentRole) {
+  Widget _buildRoleOption(BuildContext context, UserRole role, String label, IconData icon,
+      String description, UserRole currentRole) {
     final isActive = currentRole == role;
     return GestureDetector(
       onTap: () {
@@ -132,7 +175,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.darkRed.withOpacity(0.15) : AppColors.glassWhite,
+          color: isActive ? AppColors.darkRed.withValues(alpha: 0.15) : AppColors.glassWhite,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: isActive ? AppColors.darkRed : AppColors.borderGlass, width: 1.5),
         ),
@@ -141,7 +184,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: isActive ? AppColors.darkRed.withOpacity(0.2) : AppColors.glassWhite,
+                color: isActive ? AppColors.darkRed.withValues(alpha: 0.2) : AppColors.glassWhite,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: isActive ? AppColors.darkRed : AppColors.textSecondary, size: 24),
@@ -151,9 +194,13 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white, fontWeight: FontWeight.w600)),
+                  Text(label,
+                      style: AppTextStyles.bodyLarge
+                          .copyWith(color: AppColors.white, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 2),
-                  Text(description, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary, fontSize: 12)),
+                  Text(description,
+                      style: AppTextStyles.bodyMedium
+                          .copyWith(color: AppColors.textSecondary, fontSize: 12)),
                 ],
               ),
             ),
@@ -168,7 +215,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   Widget build(BuildContext context) {
     final role = ref.watch(roleProvider);
 
-    // Reset tab index only when role actually changes
     if (_previousRole != null && _previousRole != role) {
       _currentIndex = 0;
     }
@@ -200,9 +246,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      role == UserRole.student ? Icons.school_outlined
-                        : role == UserRole.founder ? Icons.rocket_launch_outlined
-                        : Icons.admin_panel_settings_outlined,
+                      role == UserRole.student
+                          ? Icons.school_outlined
+                          : role == UserRole.founder
+                              ? Icons.rocket_launch_outlined
+                              : Icons.admin_panel_settings_outlined,
                       color: AppColors.darkRed,
                       size: 16,
                     ),
@@ -240,10 +288,15 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           height: 75,
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
-            color: AppColors.darkBlueLight.withOpacity(0.85),
+            color: AppColors.darkBlueLight.withValues(alpha: 0.85),
             borderRadius: BorderRadius.circular(30),
             border: Border.all(color: AppColors.borderGlass, width: 1.5),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 20, offset: const Offset(0, 10))],
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10))
+            ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -266,7 +319,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: AppColors.redGradient,
-                boxShadow: [BoxShadow(color: AppColors.darkRed.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8))],
+                boxShadow: [
+                  BoxShadow(
+                      color: AppColors.darkRed.withValues(alpha: 0.4),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8))
+                ],
               ),
               child: Icon(items[2].icon, color: AppColors.white, size: _currentIndex == 2 ? 28 : 32),
             ),
@@ -286,7 +344,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(item.icon, color: isSelected ? AppColors.darkRed : AppColors.textSecondary, size: 26),
+            Icon(item.icon,
+                color: isSelected ? AppColors.darkRed : AppColors.textSecondary, size: 26),
             const SizedBox(height: 4),
             Text(
               item.label,

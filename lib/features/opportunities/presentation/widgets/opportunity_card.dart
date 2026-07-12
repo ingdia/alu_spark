@@ -1,78 +1,111 @@
 import 'package:flutter/material.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_text_styles.dart';
-import '../../../../core/widgets/glassmorphism_container.dart';
+import 'package:alu_spark/app/theme/app_colors.dart';
+import 'package:alu_spark/app/theme/app_text_styles.dart';
+import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
+import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 
 class OpportunityCard extends StatelessWidget {
-  final String title;
-  final String startup;
-  final String location;
-  final String type;
-  final IconData logo;
-  final int? postedDays;
+  final Opportunity opportunity;
   final VoidCallback? onTap;
 
   const OpportunityCard({
     super.key,
-    required this.title,
-    required this.startup,
-    required this.location,
-    required this.type,
-    required this.logo,
-    this.postedDays,
+    required this.opportunity,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: onTap ?? () {
+        // Navigation will be handled by the parent or router
+      },
       child: GlassmorphicContainer(
         blur: 10,
-        borderRadius: 20,
+        borderRadius: 16,
         padding: const EdgeInsets.all(16),
-        margin: const EdgeInsets.only(bottom: 16),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Logo
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: AppColors.darkRed.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(logo, color: AppColors.darkRedLight, size: 28),
-            ),
-            const SizedBox(width: 16),
-            // Details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600, color: AppColors.white)),
-                  const SizedBox(height: 4),
-                  Text(startup, style: AppTextStyles.bodyMedium),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
+            Row(
+              children: [
+                // Startup Logo Placeholder
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.darkRed.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.business, color: AppColors.darkRed, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildTag(Icons.location_on_outlined, location),
-                      _buildTag(Icons.work_outline, type),
-                      if (postedDays != null) _buildTag(Icons.schedule, '$postedDays days ago'),
+                      Text(
+                        opportunity.title,
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        opportunity.startupName,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                const Icon(Icons.bookmark_border, color: AppColors.textSecondary, size: 20),
+              ],
             ),
-            // Bookmark Icon
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.bookmark_border_rounded, color: AppColors.textSecondary, size: 22),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
+            const SizedBox(height: 16),
+            // Tags Row
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildTag(opportunity.type),
+                if (opportunity.location.isNotEmpty) _buildTag(opportunity.location),
+                if (opportunity.category.isNotEmpty) _buildTag(opportunity.category),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Footer
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.access_time, color: AppColors.textSecondary, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Posted ${_getTimeAgo(opportunity.createdAt)}',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  '${opportunity.applicationsCount} applied',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.darkRed,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -80,14 +113,28 @@ class OpportunityCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTag(IconData icon, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: AppColors.textSecondary),
-        const SizedBox(width: 4),
-        Text(label, style: AppTextStyles.bodyMedium.copyWith(fontSize: 12)),
-      ],
+  Widget _buildTag(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.glassWhite,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.borderGlass),
+      ),
+      child: Text(
+        text,
+        style: AppTextStyles.bodyMedium.copyWith(
+          color: AppColors.white,
+          fontSize: 11,
+        ),
+      ),
     );
+  }
+
+  String _getTimeAgo(DateTime date) {
+    final difference = DateTime.now().difference(date);
+    if (difference.inDays > 0) return '${difference.inDays}d ago';
+    if (difference.inHours > 0) return '${difference.inHours}h ago';
+    return 'Just now';
   }
 }

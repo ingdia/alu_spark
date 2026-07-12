@@ -147,7 +147,7 @@ class _ApplicationsReceivedScreenState extends ConsumerState<ApplicationsReceive
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.darkRed.withOpacity(0.2),
+              color: AppColors.darkRed.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: AppColors.darkRed, size: 20),
@@ -228,7 +228,7 @@ class _ApplicationsReceivedScreenState extends ConsumerState<ApplicationsReceive
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: (app['color'] as Color).withOpacity(0.2),
+                  backgroundColor: (app['color'] as Color).withValues(alpha: 0.2),
                   child: Text(
                     (app['name'] as String).substring(0, 1),
                     style: AppTextStyles.bodyLarge.copyWith(color: app['color'] as Color),
@@ -254,7 +254,7 @@ class _ApplicationsReceivedScreenState extends ConsumerState<ApplicationsReceive
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: (app['color'] as Color).withOpacity(0.2),
+                    color: (app['color'] as Color).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(

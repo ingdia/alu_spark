@@ -103,7 +103,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       title: Row(
         children: [
           CircleAvatar(
-            backgroundColor: AppColors.darkRed.withOpacity(0.2),
+            backgroundColor: AppColors.darkRed.withValues(alpha: 0.2),
             child: Text(
               widget.contactName.substring(0, 1),
               style: AppTextStyles.bodyLarge.copyWith(color: AppColors.darkRed),
@@ -187,7 +187,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               padding: const EdgeInsets.only(right: 8),
               child: CircleAvatar(
                 radius: 16,
-                backgroundColor: AppColors.darkRed.withOpacity(0.2),
+                backgroundColor: AppColors.darkRed.withValues(alpha: 0.2),
                 child: Text(
                   widget.contactName.substring(0, 1),
                   style: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed),
@@ -226,7 +226,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                     child: Text(
                       message['time'] as String,
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.white.withOpacity(0.6),
+                        color: AppColors.white.withValues(alpha: 0.6),
                         fontSize: 10,
                       ),
                     ),

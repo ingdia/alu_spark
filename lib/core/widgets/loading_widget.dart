@@ -17,7 +17,7 @@ class LoadingWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     if (showBackground) {
       return Container(
-        color: AppColors.darkBlue.withOpacity(0.9),
+        color: AppColors.darkBlue.withValues(alpha: 0.9),
         child: Center(
           child: _buildLoadingContent(),
         ),

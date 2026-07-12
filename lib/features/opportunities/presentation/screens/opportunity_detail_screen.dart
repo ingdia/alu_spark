@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
+import 'package:alu_spark/core/providers/repository_providers.dart';
 import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
+import 'package:alu_spark/app/router/app_router.dart';
 
 class OpportunityDetailScreen extends ConsumerWidget {
   final Opportunity opportunity;
@@ -12,26 +14,6 @@ class OpportunityDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Dummy data for fields to ensure zero compile errors
-    const String description = "We are looking for a passionate and skilled individual to join our growing team. You will be working on cutting-edge projects, collaborating with a diverse group of professionals, and have the opportunity to make a real impact. This role offers a unique chance to grow your skills and contribute to meaningful work.";
-    const String salary = "\$500 - \$800 / month";
-    const String location = "Kigali, Rwanda";
-    const String type = "Internship";
-    
-    final List<String> requirements = [
-      'Currently enrolled in a university',
-      'Strong communication skills',
-      'Basic knowledge of Flutter or React',
-      'Ability to work in a team',
-    ];
-
-    final List<String> benefits = [
-      'Flexible working hours',
-      'Remote work options',
-      'Mentorship from industry experts',
-      'Certificate of completion',
-    ];
-
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
       extendBodyBehindAppBar: true,
@@ -46,25 +28,25 @@ class OpportunityDetailScreen extends ConsumerWidget {
                 children: [
                   _buildStartupHeader(),
                   const SizedBox(height: 24),
-                  _buildTitleAndMeta(opportunity.title, location, type, salary),
+                  _buildTitleAndMeta(),
                   const SizedBox(height: 32),
                   _buildSectionTitle('About the Role'),
                   const SizedBox(height: 12),
-                  _buildDescription(description),
+                  _buildDescription(),
                   const SizedBox(height: 32),
                   _buildSectionTitle('Requirements'),
                   const SizedBox(height: 12),
-                  _buildRequirements(requirements),
+                  _buildRequirements(),
                   const SizedBox(height: 32),
                   _buildSectionTitle('What We Offer'),
                   const SizedBox(height: 12),
-                  _buildBenefits(benefits),
+                  _buildBenefits(),
                   const SizedBox(height: 100), // Space for bottom bar
                 ],
               ),
             ),
           ),
-          _buildBottomBar(context),
+          _buildBottomBar(context, ref),
         ],
       ),
     );
@@ -96,7 +78,7 @@ class OpportunityDetailScreen extends ConsumerWidget {
             child: IconButton(
               icon: const Icon(Icons.bookmark_border, color: AppColors.white, size: 20),
               onPressed: () {
-                // TODO: Toggle bookmark
+                // TODO: Toggle bookmark via provider
               },
             ),
           ),
@@ -152,7 +134,7 @@ class OpportunityDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Tech Startup • 11-50 employees',
+                  '${opportunity.category} • ${opportunity.type}',
                   style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                 ),
               ],
@@ -163,12 +145,12 @@ class OpportunityDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTitleAndMeta(String title, String location, String type, String salary) {
+  Widget _buildTitleAndMeta() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          title,
+          opportunity.title,
           style: AppTextStyles.headingLarge.copyWith(color: AppColors.white),
         ),
         const SizedBox(height: 16),
@@ -176,9 +158,10 @@ class OpportunityDetailScreen extends ConsumerWidget {
           spacing: 12,
           runSpacing: 12,
           children: [
-            _buildMetaChip(Icons.location_on_outlined, location),
-            _buildMetaChip(Icons.work_outline, type),
-            _buildMetaChip(Icons.attach_money, salary),
+            if (opportunity.location.isNotEmpty) _buildMetaChip(Icons.location_on_outlined, opportunity.location),
+            _buildMetaChip(Icons.work_outline, opportunity.type),
+            if (opportunity.salary != null && opportunity.salary!.isNotEmpty) 
+              _buildMetaChip(Icons.attach_money, opportunity.salary!),
           ],
         ),
       ],
@@ -211,9 +194,9 @@ class OpportunityDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDescription(String description) {
+  Widget _buildDescription() {
     return Text(
-      description,
+      opportunity.description,
       style: AppTextStyles.bodyMedium.copyWith(
         color: AppColors.textSecondary,
         height: 1.5,
@@ -221,11 +204,11 @@ class OpportunityDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRequirements(List<String> requirements) {
+  Widget _buildRequirements() {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: requirements.map((req) {
+      children: opportunity.requirements.map((req) {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
@@ -242,9 +225,9 @@ class OpportunityDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBenefits(List<String> benefits) {
+  Widget _buildBenefits() {
     return Column(
-      children: benefits.map((benefit) {
+      children: opportunity.benefits.map((benefit) {
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Row(
@@ -275,7 +258,7 @@ class OpportunityDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBottomBar(BuildContext context) {
+  Widget _buildBottomBar(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
@@ -287,8 +270,15 @@ class OpportunityDetailScreen extends ConsumerWidget {
           width: double.infinity,
           height: 50,
           child: ElevatedButton(
-            onPressed: () {
-              // TODO: Navigate to apply screen
+            onPressed: () async {
+              // Increment application count in Firestore
+              await ref.read(opportunityRepositoryProvider).incrementApplicationCount(opportunity.id);
+              
+              // Navigate to Apply Screen
+              Navigator.of(context).pushNamed(
+                RouteNames.applyOpportunity,
+                arguments: opportunity,
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.darkRed,

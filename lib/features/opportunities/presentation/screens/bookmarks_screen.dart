@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
-import 'package:alu_spark/core/constants/dummy_data.dart';
 import 'package:alu_spark/features/opportunities/presentation/widgets/opportunity_card.dart';
+import 'package:alu_spark/features/opportunities/presentation/providers/opportunity_provider.dart';
 
 class BookmarksScreen extends ConsumerStatefulWidget {
   const BookmarksScreen({super.key});
@@ -19,13 +19,9 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
   // Using final for lists to align with project conventions
   final List<String> _filters = ['All', 'Tech', 'Design', 'Marketing', 'Business'];
 
-  final List<Map<String, dynamic>> _bookmarkedOpportunities = [
-    ...DummyData.featuredOpportunities,
-    ...DummyData.recentOpportunities,
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final bookmarksAsync = ref.watch(featuredOpportunitiesProvider);
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
       appBar: _buildAppBar(),
@@ -36,9 +32,21 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
           children: [
             _buildFilterTabs(),
             const SizedBox(height: 20),
-            _buildSectionTitle('Saved Opportunities (${_bookmarkedOpportunities.length})'),
-            const SizedBox(height: 16),
-            _buildBookmarksList(),
+            bookmarksAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator(color: AppColors.darkRed)),
+              error: (e, _) => Center(child: Text('$e', style: const TextStyle(color: Colors.red))),
+              data: (list) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle('Saved Opportunities (${list.length})'),
+                  const SizedBox(height: 16),
+                  ...list.map((o) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: OpportunityCard(opportunity: o),
+                  )),
+                ],
+              ),
+            ),
             const SizedBox(height: 20),
           ],
         ),
@@ -137,22 +145,4 @@ class _BookmarksScreenState extends ConsumerState<BookmarksScreen> {
     );
   }
 
-  Widget _buildBookmarksList() {
-    // In a real app, we would filter _bookmarkedOpportunities based on _selectedFilter
-    return Column(
-      children: _bookmarkedOpportunities.map((o) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: OpportunityCard(
-            title: o['title'],
-            startup: o['startup'],
-            location: o['location'],
-            type: o['type'],
-            logo: o['logo'],
-            postedDays: o['postedDays'],
-          ),
-        );
-      }).toList(),
-    );
-  }
 }
