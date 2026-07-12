@@ -13,6 +13,8 @@ import 'package:alu_spark/features/messaging/data/repositories/message_repositor
 import 'package:alu_spark/features/messaging/domain/repositories/message_repository.dart';
 import 'package:alu_spark/features/notifications/data/repositories/notification_repository_impl.dart';
 import 'package:alu_spark/features/notifications/domain/repositories/notification_repository.dart';
+import 'package:alu_spark/features/bookmarks/data/repositories/bookmark_repository_impl.dart';
+import 'package:alu_spark/features/bookmarks/domain/repositories/bookmark_repository.dart';
 
 final opportunityRepositoryProvider = Provider<OpportunityRepository>((ref) => OpportunityRepositoryImpl());
 final applicationRepositoryProvider = Provider<ApplicationRepository>((ref) => ApplicationRepositoryImpl());
@@ -20,7 +22,8 @@ final startupRepositoryProvider = Provider<StartupRepository>((ref) => StartupRe
 final userRepositoryProvider = Provider<UserRepository>((ref) => UserRepositoryImpl());
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) => AnalyticsRepositoryImpl());
 final messageRepositoryProvider = Provider<MessageRepository>((ref) => MessageRepositoryImpl());
+final notificationRepositoryProvider = Provider<NotificationRepository>((ref) => NotificationRepositoryImpl());
 
-final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
-  return NotificationRepositoryImpl();
+final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
+  return BookmarkRepositoryImpl();
 });
