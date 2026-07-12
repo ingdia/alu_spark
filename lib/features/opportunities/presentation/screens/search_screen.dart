@@ -3,61 +3,64 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
-import 'package:alu_spark/core/constants/dummy_data.dart';
+import 'package:alu_spark/features/opportunities/presentation/providers/search_provider.dart';
 import 'package:alu_spark/features/opportunities/presentation/widgets/opportunity_card.dart';
 
-class SearchScreen extends ConsumerStatefulWidget {
+class SearchScreen extends ConsumerWidget {
   const SearchScreen({super.key});
 
   @override
-  ConsumerState<SearchScreen> createState() => _SearchScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(searchProvider);
+    final notifier = ref.read(searchProvider.notifier);
 
-class _SearchScreenState extends ConsumerState<SearchScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  
-  String _selectedCategory = 'All';
-  String _selectedLocation = 'Anywhere';
-  String _selectedType = 'Any';
-
-  // Using final for lists to align with project conventions
-  final List<String> _categories = ['All', 'Tech', 'Design', 'Marketing', 'Business', 'Finance'];
-  final List<String> _locations = ['Anywhere', 'Kigali', 'Remote', 'Nairobi', 'Cape Town'];
-  final List<String> _types = ['Any', 'Internship', 'Part-time', 'Full-time', 'Freelance'];
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
+            _SearchHeader(onFilterTap: notifier.reset),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSearchBar(),
+                    _SearchBar(
+                      query: state.query,
+                      onChanged: notifier.setQuery,
+                      onClear: () => notifier.setQuery(''),
+                    ),
                     const SizedBox(height: 24),
-                    _buildSectionTitle('Categories'),
+                    _SectionTitle(title: 'Categories'),
                     const SizedBox(height: 12),
-                    _buildCategoryChips(),
+                    _CategoryChips(
+                      categories: state.categories,
+                      selected: state.selectedCategory,
+                      onSelect: notifier.setCategory,
+                    ),
                     const SizedBox(height: 24),
-                    _buildSectionTitle('Advanced Filters'),
+                    _SectionTitle(title: 'Advanced Filters'),
                     const SizedBox(height: 12),
-                    _buildAdvancedFilters(),
+                    _AdvancedFilters(
+                      state: state,
+                      onLocationChanged: notifier.setLocation,
+                      onTypeChanged: notifier.setType,
+                    ),
                     const SizedBox(height: 24),
-                    _buildSectionTitle('Results (${DummyData.recentOpportunities.length})'),
+                    _SectionTitle(title: 'Results (${state.results.length})'),
                     const SizedBox(height: 12),
-                    _buildSearchResults(),
+                    ...state.results.map((o) => Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: OpportunityCard(
+                            title: o['title'],
+                            startup: o['startup'],
+                            location: o['location'],
+                            type: o['type'],
+                            logo: o['logo'],
+                            postedDays: o['postedDays'],
+                          ),
+                        )),
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -68,21 +71,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       ),
     );
   }
+}
 
-  Widget _buildHeader() {
+class _SearchHeader extends StatelessWidget {
+  final VoidCallback onFilterTap;
+  const _SearchHeader({required this.onFilterTap});
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Search Opportunities',
-            style: AppTextStyles.headingLarge.copyWith(color: AppColors.white),
-          ),
+          Text('Search Opportunities',
+              style: AppTextStyles.headingLarge.copyWith(color: AppColors.white)),
           GestureDetector(
-            onTap: () {
-              // TODO: Open advanced filter modal or reset filters
-            },
+            onTap: onFilterTap,
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
@@ -90,19 +95,47 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.borderGlass),
               ),
-              child: const Icon(
-                Icons.tune,
-                color: AppColors.white,
-                size: 24,
-              ),
+              child: const Icon(Icons.tune, color: AppColors.white, size: 24),
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildSearchBar() {
+class _SearchBar extends StatefulWidget {
+  final String query;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  const _SearchBar({
+    required this.query,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  @override
+  State<_SearchBar> createState() => _SearchBarState();
+}
+
+class _SearchBarState extends State<_SearchBar> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.query);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return GlassmorphicContainer(
       blur: 10,
       borderRadius: 16,
@@ -113,7 +146,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: TextField(
-              controller: _searchController,
+              controller: _controller,
               style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
               decoration: InputDecoration(
                 hintText: 'Search roles, startups, or skills...',
@@ -121,52 +154,61 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              onChanged: (value) {
-                // TODO: Trigger search provider
-                setState(() {}); // Rebuild to show/hide clear icon
-              },
+              onChanged: widget.onChanged,
             ),
           ),
-          if (_searchController.text.isNotEmpty)
+          if (_controller.text.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.clear, color: AppColors.textSecondary, size: 20),
               onPressed: () {
-                _searchController.clear();
-                // TODO: Trigger search provider
-                setState(() {});
+                _controller.clear();
+                widget.onClear();
               },
             ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
-    );
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  const _SectionTitle({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(title,
+        style: AppTextStyles.headingMedium.copyWith(color: AppColors.white));
   }
+}
 
-  Widget _buildCategoryChips() {
+class _CategoryChips extends StatelessWidget {
+  final List<String> categories;
+  final String selected;
+  final ValueChanged<String> onSelect;
+
+  const _CategoryChips({
+    required this.categories,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return SizedBox(
       height: 40,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: _categories.length,
+        itemCount: categories.length,
         itemBuilder: (context, index) {
-          final category = _categories[index];
-          final isSelected = _selectedCategory == category;
+          final category = categories[index];
+          final isSelected = selected == category;
           return Padding(
             padding: const EdgeInsets.only(right: 12),
             child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedCategory = category;
-                });
-                // TODO: Trigger search provider
-              },
-              child: Container(
+              onTap: () => onSelect(category),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected ? AppColors.darkRed : AppColors.glassWhite,
@@ -188,47 +230,65 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       ),
     );
   }
+}
 
-  Widget _buildAdvancedFilters() {
+class _AdvancedFilters extends StatelessWidget {
+  final SearchState state;
+  final ValueChanged<String> onLocationChanged;
+  final ValueChanged<String> onTypeChanged;
+
+  const _AdvancedFilters({
+    required this.state,
+    required this.onLocationChanged,
+    required this.onTypeChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return GlassmorphicContainer(
       blur: 10,
       borderRadius: 16,
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _buildFilterDropdown(
-            'Location', 
-            _selectedLocation, 
-            _locations, 
-            Icons.location_on_outlined, 
-            (val) {
-              setState(() => _selectedLocation = val!);
-              // TODO: Trigger search provider
-            }
+          _FilterDropdown(
+            label: 'Location',
+            icon: Icons.location_on_outlined,
+            value: state.selectedLocation,
+            items: state.locations,
+            onChanged: (v) => onLocationChanged(v!),
           ),
           const Divider(color: AppColors.borderGlass, height: 24),
-          _buildFilterDropdown(
-            'Job Type', 
-            _selectedType, 
-            _types, 
-            Icons.work_outline, 
-            (val) {
-              setState(() => _selectedType = val!);
-              // TODO: Trigger search provider
-            }
+          _FilterDropdown(
+            label: 'Job Type',
+            icon: Icons.work_outline,
+            value: state.selectedType,
+            items: state.types,
+            onChanged: (v) => onTypeChanged(v!),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildFilterDropdown(
-    String label, 
-    String currentValue, 
-    List<String> items, 
-    IconData icon, 
-    ValueChanged<String?> onChanged
-  ) {
+class _FilterDropdown extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final String value;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
+
+  const _FilterDropdown({
+    required this.label,
+    required this.icon,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
         Icon(icon, color: AppColors.darkRed, size: 20),
@@ -236,42 +296,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         Expanded(
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
-              value: currentValue,
+              value: value,
               dropdownColor: AppColors.darkBlueLight,
               style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
               icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.white),
-              items: items.map((String item) {
-                return DropdownMenuItem<String>(
-                  value: item,
-                  child: Text(
-                    item, 
-                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white)
-                  ),
-                );
-              }).toList(),
+              items: items
+                  .map((item) => DropdownMenuItem(
+                        value: item,
+                        child: Text(item,
+                            style: AppTextStyles.bodyMedium
+                                .copyWith(color: AppColors.white)),
+                      ))
+                  .toList(),
               onChanged: onChanged,
             ),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSearchResults() {
-    return Column(
-      children: DummyData.recentOpportunities.map((o) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: OpportunityCard(
-            title: o['title'],
-            startup: o['startup'],
-            location: o['location'],
-            type: o['type'],
-            logo: o['logo'],
-            postedDays: o['postedDays'],
-          ),
-        );
-      }).toList(),
     );
   }
 }

@@ -1,27 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
-import '../../../../core/constants/dummy_data.dart';
+import '../providers/opportunity_provider.dart';
 import '../widgets/opportunity_card.dart';
 
-class DiscoverScreen extends StatefulWidget {
+class DiscoverScreen extends ConsumerWidget {
   const DiscoverScreen({super.key});
 
   @override
-  State<DiscoverScreen> createState() => _DiscoverScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(opportunityProvider);
 
-class _DiscoverScreenState extends State<DiscoverScreen> {
-  int _selectedCategory = 0;
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            // Header
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -50,8 +45,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                             right: 0,
                             top: 0,
                             child: Container(
-                              width: 10, height: 10,
-                              decoration: const BoxDecoration(color: AppColors.darkRed, shape: BoxShape.circle),
+                              width: 10,
+                              height: 10,
+                              decoration: const BoxDecoration(
+                                color: AppColors.darkRed,
+                                shape: BoxShape.circle,
+                              ),
                             ),
                           ),
                         ],
@@ -61,106 +60,106 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 ),
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            const SliverToBoxAdapter(child: SizedBox(height: 8)),
+
+            // Category chips
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverToBoxAdapter(
-              child: SizedBox(
-                height: 40,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: DummyData.categories.length,
-                  itemBuilder: (context, index) {
-                    final isSelected = _selectedCategory == index;
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedCategory = index),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.only(right: 12),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isSelected ? AppColors.darkRed : Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isSelected ? AppColors.darkRed : AppColors.borderGlass,
+                child: SizedBox(
+                  height: 40,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: state.categories.length,
+                    itemBuilder: (context, index) {
+                      final isSelected = state.selectedCategoryIndex == index;
+                      return GestureDetector(
+                        onTap: () => ref
+                            .read(opportunityProvider.notifier)
+                            .selectCategory(index),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.only(right: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppColors.darkRed : Colors.white.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isSelected ? AppColors.darkRed : AppColors.borderGlass,
+                            ),
                           ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            DummyData.categories[index],
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: isSelected ? AppColors.white : AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
+                          child: Center(
+                            child: Text(
+                              state.categories[index],
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: isSelected ? AppColors.white : AppColors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
-            ),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-            // Featured Opportunities
+            // Featured
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverToBoxAdapter(
-                child: Text('Featured Opportunities', style: AppTextStyles.headingMedium.copyWith(fontSize: 18)),
+                child: Text('Featured Opportunities',
+                    style: AppTextStyles.headingMedium.copyWith(fontSize: 18)),
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
             SliverPadding(
               padding: const EdgeInsets.only(left: 20),
               sliver: SliverToBoxAdapter(
-              child: SizedBox(
-                height: 180,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: DummyData.featuredOpportunities.length,
-                  itemBuilder: (context, index) {
-                    final item = DummyData.featuredOpportunities[index];
-                    return _FeaturedCard(data: item);
-                  },
+                child: SizedBox(
+                  height: 180,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: state.featured.length,
+                    itemBuilder: (context, index) =>
+                        _FeaturedCard(data: state.featured[index]),
+                  ),
                 ),
               ),
             ),
-            ),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-            // Recent Opportunities
+            // Recent
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverToBoxAdapter(
-                child: Text('Recent Opportunities', style: AppTextStyles.headingMedium.copyWith(fontSize: 18)),
+                child: Text('Recent Opportunities',
+                    style: AppTextStyles.headingMedium.copyWith(fontSize: 18)),
               ),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final item = DummyData.recentOpportunities[index];
-                  return OpportunityCard(
-                    title: item['title'],
-                    startup: item['startup'],
-                    location: item['location'],
-                    type: item['type'],
-                    logo: item['logo'],
-                    postedDays: item['postedDays'],
-                    onTap: () {
-                      // Navigate to detail screen in a later commit
-                    },
-                  );
-                },
-                childCount: DummyData.recentOpportunities.length,
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final item = state.filteredRecent[index];
+                    return OpportunityCard(
+                      title: item['title'],
+                      startup: item['startup'],
+                      location: item['location'],
+                      type: item['type'],
+                      logo: item['logo'],
+                      postedDays: item['postedDays'],
+                    );
+                  },
+                  childCount: state.filteredRecent.length,
+                ),
               ),
             ),
-            ),
-            // Extra padding at the bottom so the last card isn't hidden by the nav bar
-            const SliverToBoxAdapter(child: SizedBox(height: 100)), 
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
       ),
@@ -174,6 +173,7 @@ class _FeaturedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = data['color'] as Color;
     return Container(
       width: 260,
       margin: const EdgeInsets.only(right: 16),
@@ -183,15 +183,12 @@ class _FeaturedCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            (data['color'] as Color).withOpacity(0.8),
-            (data['color'] as Color).withOpacity(0.4),
-          ],
+          colors: [color.withOpacity(0.8), color.withOpacity(0.4)],
         ),
         border: Border.all(color: AppColors.borderGlass, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: (data['color'] as Color).withOpacity(0.3),
+            color: color.withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -220,7 +217,8 @@ class _FeaturedCard extends StatelessWidget {
                 ),
                 child: Text(
                   data['type'],
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.white, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -228,23 +226,25 @@ class _FeaturedCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(data['title'], style: AppTextStyles.headingMedium.copyWith(fontSize: 18, color: AppColors.white)),
+              Text(data['title'],
+                  style: AppTextStyles.headingMedium
+                      .copyWith(fontSize: 18, color: AppColors.white)),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.business_rounded, color: AppColors.white, size: 16),
-                  const SizedBox(width: 4),
-                  Text(data['startup'], style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white.withOpacity(0.9))),
-                ],
-              ),
+              Row(children: [
+                const Icon(Icons.business_rounded, color: AppColors.white, size: 16),
+                const SizedBox(width: 4),
+                Text(data['startup'],
+                    style: AppTextStyles.bodyMedium
+                        .copyWith(color: AppColors.white.withOpacity(0.9))),
+              ]),
               const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.location_on_outlined, color: AppColors.white, size: 16),
-                  const SizedBox(width: 4),
-                  Text(data['location'], style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white.withOpacity(0.9))),
-                ],
-              ),
+              Row(children: [
+                const Icon(Icons.location_on_outlined, color: AppColors.white, size: 16),
+                const SizedBox(width: 4),
+                Text(data['location'],
+                    style: AppTextStyles.bodyMedium
+                        .copyWith(color: AppColors.white.withOpacity(0.9))),
+              ]),
             ],
           ),
         ],
