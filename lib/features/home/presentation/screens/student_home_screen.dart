@@ -6,6 +6,7 @@ import 'package:alu_spark/app/router/app_router.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/core/utils/responsive_utils.dart';
 import 'package:alu_spark/features/opportunities/presentation/providers/opportunity_provider.dart';
+import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 import 'package:alu_spark/features/applications/presentation/providers/application_provider.dart';
 
 class StudentHomeScreen extends ConsumerWidget {
@@ -13,7 +14,8 @@ class StudentHomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final opportunities = ref.watch(opportunityProvider);
+    final featuredAsync = ref.watch(featuredOpportunitiesProvider);
+    final recentAsync = ref.watch(recentOpportunitiesProvider);
     final applications = ref.watch(applicationProvider).studentApplications;
     final horizontalPadding = ResponsiveUtils.getResponsivePadding(context);
 
@@ -42,13 +44,11 @@ class StudentHomeScreen extends ConsumerWidget {
                       const SizedBox(height: 28),
                       _buildSectionHeader(context, 'Featured Opportunities'),
                       const SizedBox(height: 12),
-                      _buildFeaturedCards(context, opportunities.featured),
-                      const SizedBox(height: 24),
-                      _buildCategoryPills(context, ref, opportunities.categories, opportunities.selectedCategoryIndex),
+                      _buildAsyncCards(context, featuredAsync),
                       const SizedBox(height: 24),
                       _buildSectionHeader(context, 'Recent Opportunities'),
                       const SizedBox(height: 12),
-                      _buildRecentList(context, opportunities.recent),
+                      _buildAsyncList(context, recentAsync),
                       const SizedBox(height: 96),
                     ],
                   ),
@@ -231,94 +231,50 @@ class StudentHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFeaturedCards(BuildContext context, List<Map<String, dynamic>> featured) {
+  Widget _buildAsyncCards(BuildContext context, AsyncValue<List<Opportunity>> async) {
     final cardWidth = ResponsiveUtils.isMobile(context)
         ? MediaQuery.of(context).size.width * 0.76
         : 300.0;
-
-    final List<String> bgImages = [
-      'assets/images/featured_1.jpg',
-      'assets/images/featured_2.jpg',
-    ];
-
     return SizedBox(
       height: 208,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: featured.length,
-        itemBuilder: (context, index) {
-          final o = featured[index];
-          return Padding(
-            padding: EdgeInsets.only(right: index < featured.length - 1 ? 12 : 0),
-            child: _FeaturedCard(
-              width: cardWidth,
-              title: o['title'] as String,
-              startup: o['startup'] as String,
-              location: o['location'] as String,
-              type: o['type'] as String,
-              icon: o['logo'] as IconData,
-              bgImage: bgImages[index % bgImages.length],
-            ),
-          );
-        },
+      child: async.when(
+        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.darkRed)),
+        error: (e, _) => Center(child: Text('$e', style: const TextStyle(color: Colors.red))),
+        data: (list) => ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: list.length,
+          itemBuilder: (context, index) {
+            final o = list[index];
+            return Padding(
+              padding: EdgeInsets.only(right: index < list.length - 1 ? 12 : 0),
+              child: _FeaturedCard(
+                width: cardWidth,
+                title: o.title,
+                startup: o.startupName,
+                location: o.location,
+                type: o.type,
+                bgImage: 'assets/images/featured_${(index % 2) + 1}.jpg',
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildCategoryPills(BuildContext context, WidgetRef ref, List<String> categories, int selected) {
-    return SizedBox(
-      height: 36,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final isSelected = index == selected;
-          return GestureDetector(
-            onTap: () => ref.read(opportunityProvider.notifier).selectCategory(index),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 240),
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: isSelected ? AppColors.redGradient : null,
-                color: isSelected ? null : AppColors.glassWhite,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: isSelected ? Colors.transparent : AppColors.borderGlass,
-                ),
-                boxShadow: isSelected
-                    ? [BoxShadow(color: AppColors.darkRed.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))]
-                    : [],
-              ),
-              child: Text(
-                categories[index],
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: isSelected ? AppColors.white : AppColors.textSecondary,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  fontSize: 13,
-                  height: 1.0,
-                ),
-              ),
-            ),
-          );
-        },
+  Widget _buildAsyncList(BuildContext context, AsyncValue<List<Opportunity>> async) {
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.darkRed)),
+      error: (e, _) => Center(child: Text('$e', style: const TextStyle(color: Colors.red))),
+      data: (list) => Column(
+        children: list.map((o) => _RecentOpportunityCard(
+          title: o.title,
+          startup: o.startupName,
+          location: o.location,
+          type: o.type,
+          postedDays: DateTime.now().difference(o.createdAt).inDays,
+        )).toList(),
       ),
-    );
-  }
-
-  Widget _buildRecentList(BuildContext context, List<Map<String, dynamic>> recent) {
-    return Column(
-      children: recent.asMap().entries.map((entry) {
-        final o = entry.value;
-        return _RecentOpportunityCard(
-          title: o['title'] as String,
-          startup: o['startup'] as String,
-          location: o['location'] as String,
-          type: o['type'] as String,
-          icon: o['logo'] as IconData,
-          postedDays: o['postedDays'] as int,
-        );
-      }).toList(),
     );
   }
 }
@@ -420,7 +376,6 @@ class _FeaturedCard extends StatelessWidget {
   final String startup;
   final String location;
   final String type;
-  final IconData icon;
   final String bgImage;
 
   const _FeaturedCard({
@@ -429,7 +384,6 @@ class _FeaturedCard extends StatelessWidget {
     required this.startup,
     required this.location,
     required this.type,
-    required this.icon,
     required this.bgImage,
   });
 
@@ -485,7 +439,7 @@ class _FeaturedCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                           ),
-                          child: Icon(icon, color: AppColors.white, size: 18),
+                          child: const Icon(Icons.business_rounded, color: AppColors.white, size: 18),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -551,7 +505,6 @@ class _RecentOpportunityCard extends StatelessWidget {
   final String startup;
   final String location;
   final String type;
-  final IconData icon;
   final int postedDays;
 
   const _RecentOpportunityCard({
@@ -559,7 +512,6 @@ class _RecentOpportunityCard extends StatelessWidget {
     required this.startup,
     required this.location,
     required this.type,
-    required this.icon,
     required this.postedDays,
   });
 
@@ -587,7 +539,7 @@ class _RecentOpportunityCard extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(icon, color: AppColors.white, size: 22),
+              child: const Icon(Icons.business_rounded, color: AppColors.white, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(

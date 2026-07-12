@@ -1,24 +1,22 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:alu_spark/core/constants/dummy_data.dart';
-import 'opportunity_state.dart';
+import 'package:alu_spark/core/providers/repository_providers.dart';
+import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 
-class OpportunityNotifier extends Notifier<OpportunityState> {
-  @override
-  OpportunityState build() {
-    return OpportunityState(
-      featured: DummyData.featuredOpportunities,
-      recent: List<Map<String, dynamic>>.from(DummyData.recentOpportunities),
-      categories: DummyData.categories,
-      selectedCategoryIndex: 0,
-    );
-  }
+// Provider for Featured Opportunities
+// (For now, we fetch all active opportunities. Later we can add a 'isFeatured' filter)
+final featuredOpportunitiesProvider = StreamProvider<List<Opportunity>>((ref) {
+  final repository = ref.watch(opportunityRepositoryProvider);
+  return repository.getOpportunities();
+});
 
-  void selectCategory(int index) {
-    state = state.copyWith(selectedCategoryIndex: index);
-  }
-}
+// Provider for Recent Opportunities
+final recentOpportunitiesProvider = StreamProvider<List<Opportunity>>((ref) {
+  final repository = ref.watch(opportunityRepositoryProvider);
+  return repository.getOpportunities();
+});
 
-final opportunityProvider =
-    NotifierProvider<OpportunityNotifier, OpportunityState>(
-  OpportunityNotifier.new,
-);
+// Provider for a single opportunity (used in Detail Screen)
+final opportunityDetailProvider = StreamProvider.family<Opportunity?, String>((ref, id) {
+  final repository = ref.watch(opportunityRepositoryProvider);
+  return repository.getOpportunityById(id).asStream();
+});
