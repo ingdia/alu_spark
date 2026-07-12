@@ -10,6 +10,7 @@ import 'package:alu_spark/features/auth/presentation/screens/onboarding_screen.d
 import 'package:alu_spark/features/auth/presentation/screens/login_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/register_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/otp_verification_screen.dart';
+import 'package:alu_spark/features/auth/presentation/screens/startup_onboarding_screen.dart';
 
 // ==========================================
 // Home & Core Navigation
@@ -78,6 +79,7 @@ class RouteNames {
   static const String login = '/login';
   static const String register = '/register';
   static const String otpVerification = '/otp-verification';
+  static const String startupOnboarding = '/startup-onboarding';
   
   // Core Navigation
   static const String home = '/home';
@@ -133,6 +135,9 @@ class AppRouter {
         
       case RouteNames.otpVerification:
         return MaterialPageRoute(builder: (_) => const OtpVerificationScreen(email: 'student@alu.ac.ke'));
+
+      case RouteNames.startupOnboarding:
+        return MaterialPageRoute(builder: (_) => const StartupOnboardingScreen());
         
       // Home
       case RouteNames.home:

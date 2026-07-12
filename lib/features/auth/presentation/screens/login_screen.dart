@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/app/router/app_router.dart';
+import 'package:alu_spark/core/providers/firebase_providers.dart';
+import 'package:alu_spark/core/providers/role_provider.dart';
 import 'package:alu_spark/core/widgets/alu_logo.dart';
 import 'package:alu_spark/features/auth/presentation/providers/auth_provider.dart';
 import 'package:alu_spark/features/auth/presentation/providers/auth_state.dart';
@@ -29,13 +31,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   void _onStateChange(AuthState? previous, AuthState next) {
     if (next.status == AuthStatus.success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(next.successMessage ?? '')),
-      );
       ref.read(authNotifierProvider.notifier).reset();
+      // Sync the real role from Firestore before navigating
+      final user = ref.read(authRepositoryProvider).currentUser;
+      if (user != null) {
+        ref.read(roleProvider.notifier).setRole(user.role);
+      }
+      Navigator.pushNamedAndRemoveUntil(context, RouteNames.home, (_) => false);
     } else if (next.status == AuthStatus.error) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(next.errorMessage ?? 'An error occurred')),
+        SnackBar(
+          content: Text(next.errorMessage ?? 'An error occurred'),
+          backgroundColor: AppColors.darkRed,
+        ),
       );
       ref.read(authNotifierProvider.notifier).reset();
     }

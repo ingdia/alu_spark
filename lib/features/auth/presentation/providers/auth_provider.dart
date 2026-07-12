@@ -26,6 +26,7 @@ class AuthNotifier extends Notifier<AuthState> {
     required String email,
     required String password,
     required String fullName,
+    bool isStartup = false,
   }) async {
     state = state.copyWith(status: AuthStatus.loading);
     try {
@@ -33,9 +34,52 @@ class AuthNotifier extends Notifier<AuthState> {
             email: email,
             password: password,
             fullName: fullName,
+            isStartup: isStartup,
           );
       state = state.copyWith(
-          status: AuthStatus.success, successMessage: 'Account created successfully!');
+        status: AuthStatus.success,
+        successMessage: 'Account created successfully!',
+      );
+    } catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.error,
+        errorMessage: e.toString().replaceFirst('Exception: ', ''),
+      );
+    }
+  }
+
+  Future<void> registerStartup({
+    required String startupName,
+    required String tagline,
+    required String website,
+    required String linkedin,
+    required String industry,
+    required String stage,
+    required String teamSize,
+    required List<Map<String, String>> founders,
+    required String description,
+    required String proofFilePath,
+    required String proofFileName,
+  }) async {
+    state = state.copyWith(status: AuthStatus.loading);
+    try {
+      await ref.read(authRepositoryProvider).submitStartupProfile(
+            startupName: startupName,
+            tagline: tagline,
+            website: website,
+            linkedin: linkedin,
+            industry: industry,
+            stage: stage,
+            teamSize: teamSize,
+            founders: founders,
+            description: description,
+            proofFilePath: proofFilePath,
+            proofFileName: proofFileName,
+          );
+      state = state.copyWith(
+        status: AuthStatus.success,
+        successMessage: 'Startup profile submitted for review!',
+      );
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.error,
