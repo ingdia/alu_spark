@@ -6,3 +6,8 @@ final startupDetailProvider = StreamProvider.family<Startup?, String>((ref, star
   final repository = ref.watch(startupRepositoryProvider);
   return repository.getStartupById(startupId);
 });
+
+final unverifiedStartupsProvider = StreamProvider<List<Startup>>((ref) {
+  final repository = ref.watch(startupRepositoryProvider);
+  return repository.getUnverifiedStartups();
+});

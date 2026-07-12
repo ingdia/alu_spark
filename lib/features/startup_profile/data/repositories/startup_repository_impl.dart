@@ -21,6 +21,20 @@ class StartupRepositoryImpl implements StartupRepository {
   }
 
   @override
+  Stream<List<Startup>> getUnverifiedStartups() {
+    return _firestore
+        .collection(_collectionPath)
+        .where('isVerified', isEqualTo: false)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => StartupModel.fromFirestore(doc).toEntity())
+          .toList();
+    });
+  }
+
+  @override
   Future<void> createStartup(Startup startup) async {
     final model = StartupModel(
       id: startup.id,
@@ -54,5 +68,12 @@ class StartupRepositoryImpl implements StartupRepository {
       createdAt: startup.createdAt,
     );
     await _firestore.collection(_collectionPath).doc(startup.id).update(model.toFirestore());
+  }
+
+  @override
+  Future<void> verifyStartup(String startupId, bool isVerified) async {
+    await _firestore.collection(_collectionPath).doc(startupId).update({
+      'isVerified': isVerified,
+    });
   }
 }
