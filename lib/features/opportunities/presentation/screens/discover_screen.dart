@@ -105,7 +105,7 @@ class DiscoverScreen extends ConsumerWidget {
         loading: () => ListView.builder(
           scrollDirection: Axis.horizontal,
           itemCount: 3,
-          itemBuilder: (_, __) => const Padding(
+          itemBuilder: (_, _) => const Padding(
             padding: EdgeInsets.only(right: 16),
             child: SizedBox(width: 280, child: OpportunityCardShimmer()),
           ),

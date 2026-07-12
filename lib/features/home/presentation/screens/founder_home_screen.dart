@@ -3,15 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
-import 'package:alu_spark/features/applications/presentation/providers/application_provider.dart';
 import 'package:alu_spark/core/widgets/alu_logo.dart';
+import 'package:alu_spark/features/applications/presentation/providers/application_provider.dart';
+import 'package:alu_spark/features/applications/domain/entities/application.dart';
+import 'package:alu_spark/shared/enums/application_status.dart';
 
 class FounderHomeScreen extends ConsumerWidget {
   const FounderHomeScreen({super.key});
 
+  static const _dummyStartupId = 'dummy_startup_id_123';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final applications = ref.watch(applicationProvider).receivedApplications;
+    final applicationsAsync = ref.watch(applicationsByStartupProvider(_dummyStartupId));
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
@@ -23,15 +27,24 @@ class FounderHomeScreen extends ConsumerWidget {
             children: [
               _buildHeader(),
               const SizedBox(height: 24),
-              _buildQuickStats(applications),
-              const SizedBox(height: 32),
-              _buildSectionHeader('Quick Actions'),
-              const SizedBox(height: 16),
-              _buildQuickActions(),
-              const SizedBox(height: 32),
-              _buildSectionHeader('Recent Applications'),
-              const SizedBox(height: 16),
-              _buildRecentApplications(applications),
+              applicationsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator(color: AppColors.darkRed)),
+                error: (e, _) => Text('$e', style: const TextStyle(color: Colors.red)),
+                data: (applications) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildQuickStats(applications),
+                    const SizedBox(height: 32),
+                    _buildSectionHeader('Quick Actions'),
+                    const SizedBox(height: 16),
+                    _buildQuickActions(),
+                    const SizedBox(height: 32),
+                    _buildSectionHeader('Recent Applications'),
+                    const SizedBox(height: 16),
+                    _buildRecentApplications(applications),
+                  ],
+                ),
+              ),
               const SizedBox(height: 20),
             ],
           ),
@@ -58,13 +71,13 @@ class FounderHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickStats(List<ReceivedApplication> applications) {
-    final newCount = applications.where((a) => a.status == 'New').length;
+  Widget _buildQuickStats(List<Application> applications) {
+    final newCount = applications.where((a) => a.status == ApplicationStatus.pending).length;
     return Row(
       children: [
-        _StatCard(title: 'Posted', count: '4', icon: Icons.work_outline),
         _StatCard(title: 'Received', count: '${applications.length}', icon: Icons.people_outline),
         _StatCard(title: 'New', count: '$newCount', icon: Icons.mark_email_unread_outlined),
+        const _StatCard(title: 'Posted', count: '4', icon: Icons.work_outline),
       ],
     );
   }
@@ -76,8 +89,7 @@ class FounderHomeScreen extends ConsumerWidget {
         Text(title, style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
         TextButton(
           onPressed: () {},
-          child: Text('See All',
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed)),
+          child: Text('See All', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed)),
         ),
       ],
     );
@@ -93,9 +105,22 @@ class FounderHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRecentApplications(List<ReceivedApplication> applications) {
+  Widget _buildRecentApplications(List<Application> applications) {
+    if (applications.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('No applications yet.', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+        ),
+      );
+    }
     return Column(
-      children: applications.map((app) {
+      children: applications.take(5).map((app) {
+        final statusColor = app.status == ApplicationStatus.accepted
+            ? AppColors.darkRed
+            : app.status == ApplicationStatus.interview
+                ? AppColors.darkRedLight
+                : AppColors.textSecondary;
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: GlassmorphicContainer(
@@ -108,7 +133,7 @@ class FounderHomeScreen extends ConsumerWidget {
                   radius: 22,
                   backgroundColor: AppColors.glassWhite,
                   child: Text(
-                    app.applicantName[0],
+                    app.studentName.isNotEmpty ? app.studentName[0] : '?',
                     style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
                   ),
                 ),
@@ -117,27 +142,21 @@ class FounderHomeScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(app.applicantName,
-                          style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white)),
+                      Text(app.studentName, style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white)),
                       const SizedBox(height: 4),
-                      Text(app.role,
-                          style: AppTextStyles.bodyMedium
-                              .copyWith(color: AppColors.textSecondary)),
+                      Text(app.opportunityTitle, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
                     ],
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: app.statusColor.withValues(alpha: 0.2),
+                    color: statusColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    app.status,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: app.statusColor,
-                      fontSize: 12,
-                    ),
+                    app.status.displayName,
+                    style: AppTextStyles.bodyMedium.copyWith(color: statusColor, fontSize: 12),
                   ),
                 ),
               ],
@@ -172,8 +191,7 @@ class _StatCard extends StatelessWidget {
               Text(count, style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
               const SizedBox(height: 4),
               Text(title,
-                  style: AppTextStyles.bodyMedium
-                      .copyWith(color: AppColors.textSecondary, fontSize: 12),
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary, fontSize: 12),
                   textAlign: TextAlign.center),
             ],
           ),

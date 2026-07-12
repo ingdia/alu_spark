@@ -36,7 +36,6 @@ class OpportunityModel {
     this.applicationsCount = 0,
   });
 
-  // Convert Firestore DocumentSnapshot to Model
   factory OpportunityModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return OpportunityModel(
@@ -51,51 +50,45 @@ class OpportunityModel {
       salary: data['salary'],
       requirements: List<String>.from(data['requirements'] ?? []),
       benefits: List<String>.from(data['benefits'] ?? []),
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      deadline: (data['deadline'] as Timestamp?)?.toDate(),
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      deadline: data['deadline'] != null ? (data['deadline'] as Timestamp).toDate() : null,
       isActive: data['isActive'] ?? true,
       applicationsCount: data['applicationsCount'] ?? 0,
     );
   }
 
-  // Convert Model to Firestore Map
-  Map<String, dynamic> toFirestore() {
-    return {
-      'title': title,
-      'description': description,
-      'startupId': startupId,
-      'startupName': startupName,
-      'category': category,
-      'location': location,
-      'type': type,
-      'salary': salary,
-      'requirements': requirements,
-      'benefits': benefits,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'deadline': deadline != null ? Timestamp.fromDate(deadline!) : null,
-      'isActive': isActive,
-      'applicationsCount': applicationsCount,
-    };
-  }
+  Map<String, dynamic> toFirestore() => {
+        'title': title,
+        'description': description,
+        'startupId': startupId,
+        'startupName': startupName,
+        'category': category,
+        'location': location,
+        'type': type,
+        'salary': salary,
+        'requirements': requirements,
+        'benefits': benefits,
+        'createdAt': Timestamp.fromDate(createdAt),
+        'deadline': deadline != null ? Timestamp.fromDate(deadline!) : null,
+        'isActive': isActive,
+        'applicationsCount': applicationsCount,
+      };
 
-  // Convert Model to Domain Entity
-  Opportunity toEntity() {
-    return Opportunity(
-      id: id,
-      title: title,
-      description: description,
-      startupId: startupId,
-      startupName: startupName,
-      category: category,
-      location: location,
-      type: type,
-      salary: salary,
-      requirements: requirements,
-      benefits: benefits,
-      createdAt: createdAt,
-      deadline: deadline,
-      isActive: isActive,
-      applicationsCount: applicationsCount,
-    );
-  }
+  Opportunity toEntity() => Opportunity(
+        id: id,
+        title: title,
+        description: description,
+        startupId: startupId,
+        startupName: startupName,
+        category: category,
+        location: location,
+        type: type,
+        salary: salary,
+        requirements: requirements,
+        benefits: benefits,
+        createdAt: createdAt,
+        deadline: deadline,
+        isActive: isActive,
+        applicationsCount: applicationsCount,
+      );
 }

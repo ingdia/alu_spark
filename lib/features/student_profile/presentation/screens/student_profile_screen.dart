@@ -115,7 +115,7 @@ class StudentProfileScreen extends ConsumerWidget {
             Image.asset(
               _coverUrl,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, _) => Container(
+              errorBuilder: (_, _, _) => Container(
                 decoration: const BoxDecoration(
                     gradient: AppColors.backgroundGradient),
               ),

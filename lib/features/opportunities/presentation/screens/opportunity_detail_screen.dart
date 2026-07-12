@@ -112,7 +112,7 @@ class OpportunityDetailScreen extends ConsumerWidget {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: AppColors.darkRed.withOpacity(0.2),
+              color: AppColors.darkRed.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(Icons.business, color: AppColors.darkRed, size: 28),
@@ -236,7 +236,7 @@ class OpportunityDetailScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: AppColors.darkRed.withOpacity(0.2),
+                  color: AppColors.darkRed.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.check, color: AppColors.darkRed, size: 16),
@@ -271,10 +271,8 @@ class OpportunityDetailScreen extends ConsumerWidget {
           height: 50,
           child: ElevatedButton(
             onPressed: () async {
-              // Increment application count in Firestore
               await ref.read(opportunityRepositoryProvider).incrementApplicationCount(opportunity.id);
-              
-              // Navigate to Apply Screen
+              if (!context.mounted) return;
               Navigator.of(context).pushNamed(
                 RouteNames.applyOpportunity,
                 arguments: opportunity,
