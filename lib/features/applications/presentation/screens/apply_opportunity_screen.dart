@@ -119,7 +119,7 @@ class _ApplyOpportunityScreenState extends ConsumerState<ApplyOpportunityScreen>
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.darkRed.withOpacity(0.2),
+                      color: AppColors.darkRed.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.work_outline, color: AppColors.darkRed, size: 28),
@@ -181,7 +181,7 @@ class _ApplyOpportunityScreenState extends ConsumerState<ApplyOpportunityScreen>
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.darkRed.withOpacity(0.2),
+                      color: AppColors.darkRed.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.description_outlined, color: AppColors.darkRed, size: 24),

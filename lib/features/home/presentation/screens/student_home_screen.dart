@@ -7,7 +7,6 @@ import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/core/utils/responsive_utils.dart';
 import 'package:alu_spark/features/opportunities/presentation/providers/opportunity_provider.dart';
 import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
-import 'package:alu_spark/features/applications/presentation/providers/application_provider.dart';
 
 class StudentHomeScreen extends ConsumerWidget {
   const StudentHomeScreen({super.key});
@@ -16,7 +15,6 @@ class StudentHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final featuredAsync = ref.watch(featuredOpportunitiesProvider);
     final recentAsync = ref.watch(recentOpportunitiesProvider);
-    final applications = ref.watch(applicationProvider).studentApplications;
     final horizontalPadding = ResponsiveUtils.getResponsivePadding(context);
 
     return Scaffold(
@@ -40,7 +38,7 @@ class StudentHomeScreen extends ConsumerWidget {
                       const SizedBox(height: 20),
                       _buildSearchBar(context),
                       const SizedBox(height: 24),
-                      _buildQuickStats(context, applications.length),
+                      _buildQuickStats(context, 0),
                       const SizedBox(height: 28),
                       _buildSectionHeader(context, 'Featured Opportunities'),
                       const SizedBox(height: 12),
@@ -77,7 +75,7 @@ class StudentHomeScreen extends ConsumerWidget {
                 child: Image.asset(
                   'assets/images/avatar_alex.jpg',
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, _) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     color: AppColors.darkBlueLight,
                     child: const Icon(Icons.person, color: AppColors.white, size: 24),
                   ),
@@ -411,7 +409,7 @@ class _FeaturedCard extends StatelessWidget {
               Image.asset(
                 bgImage,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, _) => Container(
+                errorBuilder: (_, _, _) => Container(
                   decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
                 ),
               ),

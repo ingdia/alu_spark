@@ -55,7 +55,8 @@ class AuthRepositoryImpl implements AuthRepository {
       email: email,
       fullName: fullName,
       role: role,
-      isVerified: false,
+      createdAt: DateTime.now(),
+      isEmailVerified: false,
     );
 
     await _firestore.collection('users').doc(firebaseUser.uid).set({
@@ -159,7 +160,8 @@ class AuthRepositoryImpl implements AuthRepository {
           email: firebaseUser.email ?? '',
           fullName: data['fullName'] as String? ?? firebaseUser.displayName ?? 'User',
           role: role,
-          isVerified: firebaseUser.emailVerified,
+          createdAt: DateTime.now(),
+          isEmailVerified: firebaseUser.emailVerified,
         );
       }
     } catch (_) {}
@@ -180,7 +182,8 @@ class AuthRepositoryImpl implements AuthRepository {
       email: firebaseUser.email ?? '',
       fullName: firebaseUser.displayName ?? 'User',
       role: _resolveRole(firebaseUser.email ?? ''),
-      isVerified: firebaseUser.emailVerified,
+      createdAt: DateTime.now(),
+      isEmailVerified: firebaseUser.emailVerified,
     );
   }
 }

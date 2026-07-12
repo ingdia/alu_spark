@@ -24,8 +24,7 @@ class ApplicationTrackingScreen extends ConsumerWidget {
       body: authState.when(
         loading: () => const LoadingWidget(message: 'Loading...'),
         error: (error, _) => ErrorStateWidget(
-          message: error.toString(),
-          description: 'Failed to load user data.',
+          message: 'Failed to load user data.',
           onRetry: () => ref.invalidate(authStateProvider),
         ),
         data: (user) {
@@ -42,8 +41,7 @@ class ApplicationTrackingScreen extends ConsumerWidget {
           return applicationsAsync.when(
             loading: () => const LoadingWidget(message: 'Fetching applications...'),
             error: (error, _) => ErrorStateWidget(
-              message: error.toString(),
-              description: 'Failed to load applications.',
+              message: 'Failed to load applications.',
               onRetry: () => ref.invalidate(applicationsByStudentProvider(user.id)),
             ),
             data: (applications) => _buildContent(context, applications),
@@ -138,7 +136,7 @@ class ApplicationTrackingScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.darkRed.withOpacity(0.2),
+              color: AppColors.darkRed.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: AppColors.darkRed, size: 20),
@@ -189,7 +187,7 @@ class ApplicationTrackingScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.2),
+                    color: statusColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.work_outline, color: statusColor, size: 24),
@@ -214,7 +212,7 @@ class ApplicationTrackingScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.2),
+                    color: statusColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -274,7 +272,7 @@ class ApplicationTrackingScreen extends ConsumerWidget {
       case ApplicationStatus.accepted:
         return AppColors.darkRed;
       case ApplicationStatus.rejected:
-        return AppColors.textSecondary.withOpacity(0.5);
+        return AppColors.textSecondary.withValues(alpha: 0.5);
     }
   }
 }

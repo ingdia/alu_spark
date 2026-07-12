@@ -62,7 +62,9 @@ class AppRouter {
       case RouteNames.onboarding: return MaterialPageRoute(builder: (_) => const OnboardingScreen());
       case RouteNames.login: return MaterialPageRoute(builder: (_) => const LoginScreen());
       case RouteNames.register: return MaterialPageRoute(builder: (_) => const RegisterScreen());
-      case RouteNames.otpVerification: return MaterialPageRoute(builder: (_) => const OtpVerificationScreen());
+      case RouteNames.otpVerification:
+        final email = settings.arguments as String? ?? '';
+        return MaterialPageRoute(builder: (_) => OtpVerificationScreen(email: email));
       case RouteNames.home: return MaterialPageRoute(builder: (_) => const HomeShell());
       case RouteNames.discover: return MaterialPageRoute(builder: (_) => const DiscoverScreen());
       case RouteNames.search: return MaterialPageRoute(builder: (_) => const SearchScreen());

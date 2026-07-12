@@ -42,10 +42,7 @@ class ChatListScreen extends ConsumerWidget {
       ),
       body: authState.when(
         loading: () => const LoadingWidget(),
-        error: (error, _) => ErrorStateWidget(
-          message: error.toString(),
-          description: 'Failed to load user',
-        ),
+        error: (error, _) => ErrorStateWidget(message: error.toString()),
         data: (user) {
           if (user == null) {
             return const EmptyStateWidget(
@@ -61,7 +58,6 @@ class ChatListScreen extends ConsumerWidget {
             loading: () => const LoadingWidget(message: 'Loading conversations...'),
             error: (error, _) => ErrorStateWidget(
               message: error.toString(),
-              description: 'Failed to load conversations.',
               onRetry: () => ref.invalidate(conversationsProvider(user.id)),
             ),
             data: (conversations) => _buildContent(conversations),
@@ -97,7 +93,7 @@ class ChatListScreen extends ConsumerWidget {
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: AppColors.darkRed.withOpacity(0.2),
+              backgroundColor: AppColors.darkRed.withValues(alpha: 0.2),
               child: Text(
                 conv.participantName.isNotEmpty ? conv.participantName[0] : '?',
                 style: AppTextStyles.headingMedium.copyWith(color: AppColors.darkRed),

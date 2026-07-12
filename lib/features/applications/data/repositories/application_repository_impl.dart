@@ -46,6 +46,24 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
       };
 
   @override
+  Future<void> submitApplication(Application application) async {
+    final ref = _firestore.collection(_collection).doc();
+    final data = _toMap(application);
+    data['createdAt'] = Timestamp.fromDate(DateTime.now());
+    await ref.set(data);
+  }
+
+  @override
+  Stream<List<Application>> getApplicationsByStartup(String startupId) {
+    return _firestore
+        .collection(_collection)
+        .where('startupId', isEqualTo: startupId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((s) => s.docs.map(_fromDoc).toList());
+  }
+
+  @override
   Stream<List<Application>> getApplicationsByStudent(String studentId) {
     return _firestore
         .collection(_collection)
@@ -55,7 +73,6 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
         .map((s) => s.docs.map(_fromDoc).toList());
   }
 
-  @override
   Stream<List<Application>> getApplicationsByOpportunity(String opportunityId) {
     return _firestore
         .collection(_collection)
@@ -65,7 +82,6 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
         .map((s) => s.docs.map(_fromDoc).toList());
   }
 
-  @override
   Future<String> createApplication(Application application) async {
     final ref = _firestore.collection(_collection).doc();
     final data = _toMap(application);
@@ -74,12 +90,10 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
     return ref.id;
   }
 
-  @override
   Future<void> updateApplicationStatus(String applicationId, ApplicationStatus status) async {
     await _firestore.collection(_collection).doc(applicationId).update({'status': status.name});
   }
 
-  @override
   Future<void> deleteApplication(String applicationId) async {
     await _firestore.collection(_collection).doc(applicationId).delete();
   }

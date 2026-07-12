@@ -71,10 +71,7 @@ class NotificationsScreen extends ConsumerWidget {
       ),
       body: authState.when(
         loading: () => const LoadingWidget(),
-        error: (error, _) => ErrorStateWidget(
-          message: error.toString(),
-          description: 'Failed to load user',
-        ),
+        error: (error, _) => ErrorStateWidget(message: error.toString()),
         data: (user) {
           if (user == null) {
             return const EmptyStateWidget(
@@ -90,7 +87,6 @@ class NotificationsScreen extends ConsumerWidget {
             loading: () => const LoadingWidget(message: 'Loading notifications...'),
             error: (error, _) => ErrorStateWidget(
               message: error.toString(),
-              description: 'Failed to load notifications.',
               onRetry: () => ref.invalidate(notificationsProvider(user.id)),
             ),
             data: (notifications) => _buildContent(context, ref, notifications),
@@ -139,7 +135,7 @@ class NotificationsScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.darkRed.withOpacity(0.2),
+                  color: AppColors.darkRed.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(iconData, color: AppColors.darkRed, size: 24),

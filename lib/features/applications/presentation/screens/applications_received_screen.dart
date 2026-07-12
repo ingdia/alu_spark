@@ -25,8 +25,7 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
       body: applicationsAsync.when(
         loading: () => const LoadingWidget(message: 'Fetching applications...'),
         error: (error, _) => ErrorStateWidget(
-          message: error.toString(),
-          description: 'Failed to load applications.',
+          message: 'Failed to load applications.',
           onRetry: () => ref.invalidate(applicationsByStartupProvider(startupId)),
         ),
         data: (applications) => _buildContent(context, applications),
@@ -119,7 +118,7 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.darkRed.withOpacity(0.2),
+              color: AppColors.darkRed.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: AppColors.darkRed, size: 20),
@@ -168,7 +167,7 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: statusColor.withOpacity(0.2),
+                  backgroundColor: statusColor.withValues(alpha: 0.2),
                   child: Text(
                     app.studentName.isNotEmpty ? app.studentName[0] : '?',
                     style: AppTextStyles.bodyLarge.copyWith(color: statusColor),
@@ -194,7 +193,7 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.2),
+                    color: statusColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -286,7 +285,7 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
       case ApplicationStatus.accepted:
         return AppColors.darkRed;
       case ApplicationStatus.rejected:
-        return AppColors.textSecondary.withOpacity(0.5);
+        return AppColors.textSecondary.withValues(alpha: 0.5);
     }
   }
 }

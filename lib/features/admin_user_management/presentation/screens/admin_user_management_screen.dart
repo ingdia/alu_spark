@@ -58,7 +58,6 @@ class _AdminUserManagementScreenState extends ConsumerState<AdminUserManagementS
               loading: () => const LoadingWidget(message: 'Fetching users...'),
               error: (error, _) => ErrorStateWidget(
                 message: error.toString(),
-                description: 'Failed to load users.',
                 onRetry: () => ref.invalidate(usersProvider),
               ),
               data: (users) => _buildContent(users),
@@ -143,7 +142,7 @@ class _AdminUserManagementScreenState extends ConsumerState<AdminUserManagementS
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: roleColor.withOpacity(0.2),
+                  backgroundColor: roleColor.withValues(alpha: 0.2),
                   child: Text(
                     user.fullName.isNotEmpty ? user.fullName[0] : '?',
                     style: AppTextStyles.bodyLarge.copyWith(color: roleColor),
@@ -169,7 +168,7 @@ class _AdminUserManagementScreenState extends ConsumerState<AdminUserManagementS
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: roleColor.withOpacity(0.2),
+                    color: roleColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(

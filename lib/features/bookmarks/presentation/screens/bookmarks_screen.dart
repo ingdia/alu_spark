@@ -44,8 +44,7 @@ class BookmarksScreen extends ConsumerWidget {
       body: authState.when(
         loading: () => const LoadingWidget(),
         error: (error, _) => ErrorStateWidget(
-          message: error.toString(),
-          description: 'Failed to load user',
+          message: 'Failed to load user',
         ),
         data: (user) {
           if (user == null) {
@@ -61,8 +60,7 @@ class BookmarksScreen extends ConsumerWidget {
           return bookmarksAsync.when(
             loading: () => const LoadingWidget(message: 'Loading bookmarks...'),
             error: (error, _) => ErrorStateWidget(
-              message: error.toString(),
-              description: 'Failed to load bookmarks.',
+              message: 'Failed to load bookmarks.',
               onRetry: () => ref.invalidate(bookmarksProvider(user.id)),
             ),
             data: (bookmarks) => _buildContent(context, ref, bookmarks),
@@ -120,7 +118,7 @@ class BookmarksScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.darkRed.withOpacity(0.2),
+                  color: AppColors.darkRed.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.bookmark, color: AppColors.darkRed, size: 24),

@@ -42,7 +42,6 @@ class AdminAnalyticsScreen extends ConsumerWidget {
         loading: () => const LoadingWidget(message: 'Calculating platform metrics...'),
         error: (error, _) => ErrorStateWidget(
           message: error.toString(),
-          description: 'Failed to load analytics.',
           onRetry: () => ref.invalidate(platformStatsProvider),
         ),
         data: (stats) => _buildContent(context, stats),
@@ -104,7 +103,7 @@ class AdminAnalyticsScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.darkRed.withOpacity(0.2),
+              color: AppColors.darkRed.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: AppColors.darkRed, size: 20),
