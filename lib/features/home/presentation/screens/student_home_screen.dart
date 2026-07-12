@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
-import 'package:alu_spark/core/constants/dummy_data.dart';
 import 'package:alu_spark/core/utils/responsive_utils.dart';
+import 'package:alu_spark/features/opportunities/presentation/providers/opportunity_provider.dart';
+import 'package:alu_spark/features/applications/presentation/providers/application_provider.dart';
 import 'package:alu_spark/features/opportunities/presentation/widgets/opportunity_card.dart';
 
 class StudentHomeScreen extends ConsumerWidget {
@@ -12,8 +13,10 @@ class StudentHomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final opportunities = ref.watch(opportunityProvider);
+    final applications = ref.watch(applicationProvider).studentApplications;
     final horizontalPadding = ResponsiveUtils.getResponsivePadding(context);
-    
+
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
       body: SafeArea(
@@ -29,15 +32,15 @@ class StudentHomeScreen extends ConsumerWidget {
                 children: [
                   _buildHeader(context),
                   const SizedBox(height: 24),
-                  _buildQuickStats(context),
+                  _buildQuickStats(context, applications.length),
                   const SizedBox(height: 32),
                   _buildSectionHeader(context, 'Recommended for You'),
                   const SizedBox(height: 16),
-                  _buildRecommendedOpportunities(context),
+                  _buildRecommendedOpportunities(context, opportunities.featured),
                   const SizedBox(height: 32),
                   _buildSectionHeader(context, 'Your Applications'),
                   const SizedBox(height: 16),
-                  _buildApplicationStatus(context),
+                  _buildApplicationStatus(context, applications),
                   const SizedBox(height: 20),
                 ],
               ),
@@ -49,8 +52,6 @@ class StudentHomeScreen extends ConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
-    final titleSize = ResponsiveUtils.getResponsiveFontSize(context, 24);
-    
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -62,7 +63,7 @@ class StudentHomeScreen extends ConsumerWidget {
                 'Good morning, Alex 👋',
                 style: AppTextStyles.headingMedium.copyWith(
                   color: AppColors.white,
-                  fontSize: titleSize,
+                  fontSize: ResponsiveUtils.getResponsiveFontSize(context, 24),
                 ),
               ),
               const SizedBox(height: 4),
@@ -76,85 +77,42 @@ class StudentHomeScreen extends ConsumerWidget {
             ],
           ),
         ),
-        GestureDetector(
-          onTap: () {
-            // TODO: Navigate to notifications
-          },
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.glassWhite,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.borderGlass),
-            ),
-            child: const Icon(
-              Icons.notifications_outlined,
-              color: AppColors.white,
-              size: 24,
-            ),
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.glassWhite,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.borderGlass),
           ),
+          child: const Icon(Icons.notifications_outlined, color: AppColors.white, size: 24),
         ),
       ],
     );
   }
 
-  Widget _buildQuickStats(BuildContext context) {
-    final isMobile = ResponsiveUtils.isMobile(context);
+  Widget _buildQuickStats(BuildContext context, int appliedCount) {
     final spacing = ResponsiveUtils.getResponsiveSpacing(context, 8);
-    
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: spacing / 2),
-            child: _buildStatCard('Applied', '5', Icons.send_outlined),
+            child: _StatCard(title: 'Applied', count: '$appliedCount', icon: Icons.send_outlined),
           ),
         ),
-        if (isMobile) ...[
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: spacing / 2),
-              child: _buildStatCard('Bookmarks', '12', Icons.bookmark_border),
-            ),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: spacing / 2),
+            child: const _StatCard(title: 'Bookmarks', count: '12', icon: Icons.bookmark_border),
           ),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: spacing / 2),
-              child: _buildStatCard('Interviews', '2', Icons.calendar_today_outlined),
-            ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: spacing / 2),
+            child: const _StatCard(title: 'Interviews', count: '2', icon: Icons.calendar_today_outlined),
           ),
-        ],
+        ),
       ],
-    );
-  }
-
-  Widget _buildStatCard(String title, String count, IconData icon) {
-    return GlassmorphicContainer(
-      blur: 10,
-      borderRadius: 16,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Icon(icon, color: AppColors.darkRed, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            count,
-            style: AppTextStyles.headingMedium.copyWith(
-              color: AppColors.white,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
     );
   }
 
@@ -170,32 +128,27 @@ class StudentHomeScreen extends ConsumerWidget {
           ),
         ),
         TextButton(
-          onPressed: () {
-            // TODO: Navigate to see all
-          },
-          child: Text(
-            'See All',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.darkRed,
-            ),
-          ),
+          onPressed: () {},
+          child: Text('See All',
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed)),
         ),
       ],
     );
   }
 
-  Widget _buildRecommendedOpportunities(BuildContext context) {
+  Widget _buildRecommendedOpportunities(
+      BuildContext context, List<Map<String, dynamic>> featured) {
+    final cardWidth = ResponsiveUtils.isMobile(context)
+        ? MediaQuery.of(context).size.width * 0.75
+        : 320.0;
+
     return SizedBox(
       height: 240,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: DummyData.featuredOpportunities.length,
+        itemCount: featured.length,
         itemBuilder: (context, index) {
-          final o = DummyData.featuredOpportunities[index];
-          final cardWidth = ResponsiveUtils.isMobile(context) 
-              ? MediaQuery.of(context).size.width * 0.75
-              : 320.0;
-              
+          final o = featured[index];
           return Padding(
             padding: const EdgeInsets.only(right: 16),
             child: SizedBox(
@@ -214,13 +167,8 @@ class StudentHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildApplicationStatus(BuildContext context) {
-    final applications = [
-      {'title': 'UI/UX Designer', 'startup': 'DesignHub', 'status': 'Interview', 'color': AppColors.darkRed},
-      {'title': 'Frontend Developer', 'startup': 'TechStart', 'status': 'Pending', 'color': AppColors.lightGray},
-      {'title': 'Marketing Intern', 'startup': 'GrowthLab', 'status': 'Accepted', 'color': AppColors.darkRedLight},
-    ];
-    
+  Widget _buildApplicationStatus(
+      BuildContext context, List<StudentApplication> applications) {
     return Column(
       children: applications.map((app) {
         return Padding(
@@ -235,7 +183,7 @@ class StudentHomeScreen extends ConsumerWidget {
                   width: 8,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: app['color'] as Color,
+                    color: app.statusColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -245,32 +193,29 @@ class StudentHomeScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        app['title'] as String,
+                        app.title,
                         style: AppTextStyles.bodyLarge.copyWith(
                           color: AppColors.white,
                           fontSize: ResponsiveUtils.getResponsiveFontSize(context, 16),
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        app['startup'] as String,
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
+                      Text(app.startup,
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(color: AppColors.textSecondary)),
                     ],
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: (app['color'] as Color).withOpacity(0.2),
+                    color: app.statusColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    app['status'] as String,
+                    app.status,
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: app['color'] as Color,
+                      color: app.statusColor,
                       fontSize: 12,
                     ),
                   ),
@@ -280,6 +225,35 @@ class StudentHomeScreen extends ConsumerWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String count;
+  final IconData icon;
+
+  const _StatCard({required this.title, required this.count, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassmorphicContainer(
+      blur: 10,
+      borderRadius: 16,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Icon(icon, color: AppColors.darkRed, size: 28),
+          const SizedBox(height: 8),
+          Text(count, style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
+          const SizedBox(height: 4),
+          Text(title,
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textSecondary, fontSize: 12),
+              textAlign: TextAlign.center),
+        ],
+      ),
     );
   }
 }
