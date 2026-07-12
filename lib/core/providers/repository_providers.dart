@@ -9,28 +9,15 @@ import 'package:alu_spark/features/admin_user_management/data/repositories/user_
 import 'package:alu_spark/features/admin_user_management/domain/repositories/user_repository.dart';
 import 'package:alu_spark/features/admin_analytics/data/repositories/analytics_repository_impl.dart';
 import 'package:alu_spark/features/admin_analytics/domain/repositories/analytics_repository.dart';
+import 'package:alu_spark/features/messaging/data/repositories/message_repository_impl.dart';
+import 'package:alu_spark/features/messaging/domain/repositories/message_repository.dart';
 
-// Opportunity Repository
-final opportunityRepositoryProvider = Provider<OpportunityRepository>((ref) {
-  return OpportunityRepositoryImpl();
-});
+final opportunityRepositoryProvider = Provider<OpportunityRepository>((ref) => OpportunityRepositoryImpl());
+final applicationRepositoryProvider = Provider<ApplicationRepository>((ref) => ApplicationRepositoryImpl());
+final startupRepositoryProvider = Provider<StartupRepository>((ref) => StartupRepositoryImpl());
+final userRepositoryProvider = Provider<UserRepository>((ref) => UserRepositoryImpl());
+final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) => AnalyticsRepositoryImpl());
 
-// Application Repository
-final applicationRepositoryProvider = Provider<ApplicationRepository>((ref) {
-  return ApplicationRepositoryImpl();
-});
-
-// Startup Repository
-final startupRepositoryProvider = Provider<StartupRepository>((ref) {
-  return StartupRepositoryImpl();
-});
-
-// User Repository (For Admin)
-final userRepositoryProvider = Provider<UserRepository>((ref) {
-  return UserRepositoryImpl();
-});
-
-// Analytics Repository (For Admin)
-final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
-  return AnalyticsRepositoryImpl();
+final messageRepositoryProvider = Provider<MessageRepository>((ref) {
+  return MessageRepositoryImpl();
 });
