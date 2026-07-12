@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
+import 'package:alu_spark/app/router/app_router.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/core/utils/responsive_utils.dart';
 import 'package:alu_spark/features/opportunities/presentation/providers/opportunity_provider.dart';
@@ -76,7 +77,7 @@ class StudentHomeScreen extends ConsumerWidget {
                 child: Image.asset(
                   'assets/images/avatar_alex.jpg',
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                  errorBuilder: (_, __, _) => Container(
                     color: AppColors.darkBlueLight,
                     child: const Icon(Icons.person, color: AppColors.white, size: 24),
                   ),
@@ -123,27 +124,30 @@ class StudentHomeScreen extends ConsumerWidget {
             ],
           ),
         ),
-        GlassmorphicContainer(
-          blur: 12,
-          borderRadius: 12,
-          padding: const EdgeInsets.all(10),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Icon(Icons.notifications_outlined, color: AppColors.white, size: 20),
-              Positioned(
-                top: -2,
-                right: -2,
-                child: Container(
-                  width: 7,
-                  height: 7,
-                  decoration: const BoxDecoration(
-                    color: AppColors.darkRed,
-                    shape: BoxShape.circle,
+        GestureDetector(
+          onTap: () => Navigator.of(context).pushNamed(RouteNames.notifications),
+          child: GlassmorphicContainer(
+            blur: 12,
+            borderRadius: 12,
+            padding: const EdgeInsets.all(10),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.notifications_outlined, color: AppColors.white, size: 20),
+                Positioned(
+                  top: -2,
+                  right: -2,
+                  child: Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                      color: AppColors.darkRed,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
@@ -453,7 +457,7 @@ class _FeaturedCard extends StatelessWidget {
               Image.asset(
                 bgImage,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, __, _) => Container(
                   decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
                 ),
               ),

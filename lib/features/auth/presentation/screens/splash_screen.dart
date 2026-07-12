@@ -52,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen>
             fit: BoxFit.cover,
             width: size.width,
             height: size.height,
-            errorBuilder: (_, __, ___) => Container(
+            errorBuilder: (_, _, _) => Container(
               decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
             ),
           ),

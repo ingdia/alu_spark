@@ -174,7 +174,7 @@ class _StartupProfileEditScreenState extends ConsumerState<StartupProfileEditScr
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: AppColors.darkRed.withOpacity(0.2),
+                    backgroundColor: AppColors.darkRed.withValues(alpha: 0.2),
                     child: Text(
                       member['name']!.substring(0, 1),
                       style: AppTextStyles.bodyLarge.copyWith(color: AppColors.darkRed),

@@ -133,16 +133,16 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.darkRed.withOpacity(0.1),
+                  color: AppColors.darkRed.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.darkRed.withOpacity(0.4), width: 1.5),
+                  border: Border.all(color: AppColors.darkRed.withValues(alpha: 0.4), width: 1.5),
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppColors.darkRed.withOpacity(0.2),
+                        color: AppColors.darkRed.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.logout, color: AppColors.darkRed, size: 24),
@@ -175,7 +175,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.darkRed.withOpacity(0.15) : AppColors.glassWhite,
+          color: isActive ? AppColors.darkRed.withValues(alpha: 0.15) : AppColors.glassWhite,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: isActive ? AppColors.darkRed : AppColors.borderGlass, width: 1.5),
         ),
@@ -184,7 +184,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: isActive ? AppColors.darkRed.withOpacity(0.2) : AppColors.glassWhite,
+                color: isActive ? AppColors.darkRed.withValues(alpha: 0.2) : AppColors.glassWhite,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: isActive ? AppColors.darkRed : AppColors.textSecondary, size: 24),
@@ -288,12 +288,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           height: 75,
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
-            color: AppColors.darkBlueLight.withOpacity(0.85),
+            color: AppColors.darkBlueLight.withValues(alpha: 0.85),
             borderRadius: BorderRadius.circular(30),
             border: Border.all(color: AppColors.borderGlass, width: 1.5),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.25),
+                  color: Colors.black.withValues(alpha: 0.25),
                   blurRadius: 20,
                   offset: const Offset(0, 10))
             ],
@@ -321,7 +321,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 gradient: AppColors.redGradient,
                 boxShadow: [
                   BoxShadow(
-                      color: AppColors.darkRed.withOpacity(0.4),
+                      color: AppColors.darkRed.withValues(alpha: 0.4),
                       blurRadius: 15,
                       offset: const Offset(0, 8))
                 ],

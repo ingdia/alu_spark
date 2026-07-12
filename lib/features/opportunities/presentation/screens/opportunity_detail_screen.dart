@@ -135,7 +135,7 @@ class _OpportunityDetailScreenState
             Image.asset(
               'assets/images/detail_bg.jpg',
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, __, _) => Container(
                 decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
               ),
             ),

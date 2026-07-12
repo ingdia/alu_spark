@@ -5,38 +5,38 @@ import 'package:alu_spark/features/auth/presentation/screens/login_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/splash_screen.dart';
 import 'package:alu_spark/features/home/presentation/screens/home_shell.dart';
 
-class AuthWrapper extends ConsumerWidget {
+class AuthWrapper extends ConsumerStatefulWidget {
   const AuthWrapper({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the auth state stream we created in firebase_providers.dart
+  ConsumerState<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends ConsumerState<AuthWrapper> {
+  bool _showingSplash = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Always show splash for at least 2.5 seconds
+    Future.delayed(const Duration(milliseconds: 2500), () {
+      if (mounted) setState(() => _showingSplash = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_showingSplash) return const SplashScreen();
+
     final authState = ref.watch(authStateProvider);
 
-    // Use .when() to handle the 3 states of an AsyncValue (loading, data, error)
     return authState.when(
-      // 1. Loading: Firebase is checking if a user is already logged in
-      loading: () => const SplashScreen(), 
-      
-      // 2. Data: Firebase has returned the auth state
-      data: (user) {
-        if (user != null) {
-          // User is logged in -> Show Home
-          return const HomeShell();
-        } else {
-          // User is NOT logged in -> Show Login
-          return const LoginScreen();
-        }
-      },
-      
-      // 3. Error: Something went wrong with Firebase
+      loading: () => const SplashScreen(),
+      data: (user) => user != null ? const HomeShell() : const LoginScreen(),
       error: (error, stack) => Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: Text(
-            'Error: $error',
-            style: const TextStyle(color: Colors.red),
-          ),
+          child: Text('Error: $error', style: const TextStyle(color: Colors.red)),
         ),
       ),
     );

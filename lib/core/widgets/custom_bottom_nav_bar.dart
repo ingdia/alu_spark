@@ -17,10 +17,10 @@ class CustomBottomNavBar extends StatelessWidget {
           height: 75,
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
-            color: AppColors.darkBlueLight.withOpacity(0.85),
+            color: AppColors.darkBlueLight.withValues(alpha: 0.85),
             borderRadius: BorderRadius.circular(30),
             border: Border.all(color: AppColors.borderGlass, width: 1.5),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 20, offset: const Offset(0, 10))],
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 20, offset: const Offset(0, 10))],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -42,7 +42,7 @@ class CustomBottomNavBar extends StatelessWidget {
               width: 60, height: 60,
               decoration: BoxDecoration(
                 shape: BoxShape.circle, gradient: AppColors.redGradient,
-                boxShadow: [BoxShadow(color: AppColors.darkRed.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8))],
+                boxShadow: [BoxShadow(color: AppColors.darkRed.withValues(alpha: 0.4), blurRadius: 15, offset: const Offset(0, 8))],
               ),
               child: const Icon(Icons.add_rounded, color: AppColors.white, size: 32),
             ),

@@ -10,10 +10,9 @@ class AuthRepositoryImpl implements AuthRepository {
   final FirebaseFirestore _firestore;
 
   AuthRepositoryImpl({
-    required FirebaseAuthService authService,
+    required this._authService,
     FirebaseFirestore? firestore,
-  })  : _authService = authService,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+  }) : _firestore = firestore ?? FirebaseFirestore.instance;
 
   @override
   Stream<User?> get authStateChanges {

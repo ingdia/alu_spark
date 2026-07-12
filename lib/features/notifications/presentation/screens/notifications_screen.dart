@@ -225,7 +225,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: (notif['color'] as Color).withOpacity(0.2),
+                  color: (notif['color'] as Color).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(

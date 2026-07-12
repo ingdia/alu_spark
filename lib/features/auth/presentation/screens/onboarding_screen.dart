@@ -146,7 +146,7 @@ class _FullScreenPage extends StatelessWidget {
         Image.asset(
           data.imageAsset,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
+          errorBuilder: (_, _, _) => Container(
             decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
           ),
         ),

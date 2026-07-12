@@ -81,13 +81,13 @@ class StartupProfileScreen extends ConsumerWidget {
                       const SizedBox(height: 4),
                       Text(
                         tagline,
-                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white.withOpacity(0.8)),
+                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white.withValues(alpha: 0.8)),
                       ),
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.darkRed.withOpacity(0.2),
+                          color: AppColors.darkRed.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: AppColors.darkRed),
                         ),
@@ -214,7 +214,7 @@ class StartupProfileScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.darkRed.withOpacity(0.2),
+                    color: AppColors.darkRed.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.work_outline, color: AppColors.darkRed, size: 24),
@@ -257,7 +257,7 @@ class StartupProfileScreen extends ConsumerWidget {
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: AppColors.darkRed.withOpacity(0.2),
+                  backgroundColor: AppColors.darkRed.withValues(alpha: 0.2),
                   child: Text(
                     member['name']!.substring(0, 1),
                     style: AppTextStyles.bodyLarge.copyWith(color: AppColors.darkRed),

@@ -34,7 +34,7 @@ class DiscoverScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                         border: Border.all(color: AppColors.borderGlass),
                       ),
@@ -82,7 +82,7 @@ class DiscoverScreen extends ConsumerWidget {
                           margin: const EdgeInsets.only(right: 12),
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                           decoration: BoxDecoration(
-                            color: isSelected ? AppColors.darkRed : Colors.white.withOpacity(0.05),
+                            color: isSelected ? AppColors.darkRed : Colors.white.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: isSelected ? AppColors.darkRed : AppColors.borderGlass,
@@ -183,12 +183,12 @@ class _FeaturedCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [color.withOpacity(0.8), color.withOpacity(0.4)],
+          colors: [color.withValues(alpha: 0.8), color.withValues(alpha: 0.4)],
         ),
         border: Border.all(color: AppColors.borderGlass, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -204,7 +204,7 @@ class _FeaturedCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(data['logo'], color: AppColors.white, size: 28),
@@ -212,7 +212,7 @@ class _FeaturedCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -235,7 +235,7 @@ class _FeaturedCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(data['startup'],
                     style: AppTextStyles.bodyMedium
-                        .copyWith(color: AppColors.white.withOpacity(0.9))),
+                        .copyWith(color: AppColors.white.withValues(alpha: 0.9))),
               ]),
               const SizedBox(height: 4),
               Row(children: [
@@ -243,7 +243,7 @@ class _FeaturedCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(data['location'],
                     style: AppTextStyles.bodyMedium
-                        .copyWith(color: AppColors.white.withOpacity(0.9))),
+                        .copyWith(color: AppColors.white.withValues(alpha: 0.9))),
               ]),
             ],
           ),

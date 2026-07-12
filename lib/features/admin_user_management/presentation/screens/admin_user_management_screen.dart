@@ -221,7 +221,7 @@ class _AdminUserManagementScreenState extends ConsumerState<AdminUserManagementS
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: (user['color'] as Color).withOpacity(0.2),
+                  backgroundColor: (user['color'] as Color).withValues(alpha: 0.2),
                   child: Text(
                     (user['name'] as String).substring(0, 1),
                     style: AppTextStyles.bodyLarge.copyWith(color: user['color'] as Color),
@@ -247,7 +247,7 @@ class _AdminUserManagementScreenState extends ConsumerState<AdminUserManagementS
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: (user['color'] as Color).withOpacity(0.2),
+                    color: (user['color'] as Color).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -279,8 +279,8 @@ class _AdminUserManagementScreenState extends ConsumerState<AdminUserManagementS
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: user['status'] == 'Active' 
-                        ? AppColors.darkRedLight.withOpacity(0.2) 
-                        : AppColors.textSecondary.withOpacity(0.2),
+                        ? AppColors.darkRedLight.withValues(alpha: 0.2) 
+                        : AppColors.textSecondary.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(

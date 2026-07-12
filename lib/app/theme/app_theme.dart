@@ -13,7 +13,6 @@ class AppTheme {
         primary: AppColors.darkRed,
         secondary: AppColors.darkBlueLight,
         surface: AppColors.darkBlueLight,
-        background: AppColors.darkBlue,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent, elevation: 0, centerTitle: true,

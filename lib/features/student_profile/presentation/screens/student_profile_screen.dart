@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
+import 'package:alu_spark/app/router/app_router.dart';
+import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 
 class StudentProfileScreen extends ConsumerWidget {
@@ -63,7 +65,7 @@ class StudentProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   _buildTimelineSection('Experience', _experience, Icons.work_rounded),
                   const SizedBox(height: 24),
-                  _buildMenuSection(),
+                  _buildMenuSection(context, ref),
                   const SizedBox(height: 32),
                 ],
               ),
@@ -113,7 +115,7 @@ class StudentProfileScreen extends ConsumerWidget {
             Image.asset(
               _coverUrl,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, __, _) => Container(
                 decoration: const BoxDecoration(
                     gradient: AppColors.backgroundGradient),
               ),
@@ -449,7 +451,37 @@ class StudentProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMenuSection() {
+  void _onMenuTap(BuildContext context, WidgetRef ref, int index) async {
+    switch (index) {
+      case 0:
+        Navigator.of(context).pushNamed(RouteNames.bookmarks);
+        break;
+      case 1:
+        Navigator.of(context).pushNamed(RouteNames.notifications);
+        break;
+      case 2:
+        // My Analytics — placeholder until screen exists
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Analytics coming soon')),
+        );
+        break;
+      case 3:
+        // Settings — placeholder until screen exists
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Settings coming soon')),
+        );
+        break;
+      case 4:
+        await ref.read(authRepositoryProvider).signOut();
+        if (context.mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+              RouteNames.login, (_) => false);
+        }
+        break;
+    }
+  }
+
+  Widget _buildMenuSection(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -461,14 +493,15 @@ class StudentProfileScreen extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(
             children: _menuItems.asMap().entries.map((entry) {
+              final index = entry.key;
               final item = entry.value;
               final color = item['color'] as Color;
-              final isLast = entry.key == _menuItems.length - 1;
+              final isLast = index == _menuItems.length - 1;
 
               return Column(
                 children: [
                   InkWell(
-                    onTap: () {},
+                    onTap: () => _onMenuTap(context, ref, index),
                     borderRadius: BorderRadius.circular(12),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(

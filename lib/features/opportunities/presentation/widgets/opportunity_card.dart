@@ -40,7 +40,7 @@ class OpportunityCard extends StatelessWidget {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: AppColors.darkRed.withOpacity(0.2),
+                color: AppColors.darkRed.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(logo, color: AppColors.darkRedLight, size: 28),

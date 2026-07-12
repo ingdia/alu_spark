@@ -90,7 +90,7 @@ class AdminHomeScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.darkRed.withOpacity(0.2),
+                  color: AppColors.darkRed.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: AppColors.darkRed, size: 20),
@@ -171,7 +171,7 @@ class AdminHomeScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.darkRed.withOpacity(0.2),
+                    color: AppColors.darkRed.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(act['icon'] as IconData, color: AppColors.darkRed, size: 20),
