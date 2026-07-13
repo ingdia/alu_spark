@@ -17,97 +17,108 @@ class OpportunityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap ?? () {
-        // Navigation will be handled by the parent or router
-      },
-      child: GlassmorphicContainer(
-        blur: 10,
-        borderRadius: 16,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                // Startup Logo Placeholder
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.darkRed.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) {
+          return Opacity(
+            opacity: value,
+            child: Transform.translate(
+              offset: Offset(0, 20 * (1 - value)),
+              child: child,
+            ),
+          );
+        },
+        child: GlassmorphicContainer(
+          blur: 10,
+          borderRadius: 16,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  // Startup Logo Placeholder
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.darkRed.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.business, color: AppColors.darkRed, size: 24),
                   ),
-                  child: const Icon(Icons.business, color: AppColors.darkRed, size: 24),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        opportunity.title,
-                        style: AppTextStyles.bodyLarge.copyWith(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.w600,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          opportunity.title,
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
+                        const SizedBox(height: 2),
+                        Text(
+                          opportunity.startupName,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Tags Row
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildTag(opportunity.type),
+                  if (opportunity.location.isNotEmpty) _buildTag(opportunity.location),
+                  if (opportunity.category.isNotEmpty) _buildTag(opportunity.category),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Footer
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time, color: AppColors.textSecondary, size: 14),
+                      const SizedBox(width: 4),
                       Text(
-                        opportunity.startupName,
+                        'Posted ${_getTimeAgo(opportunity.createdAt)}',
                         style: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.textSecondary,
+                          fontSize: 12,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
-                ),
-                const Icon(Icons.bookmark_border, color: AppColors.textSecondary, size: 20),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Tags Row
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildTag(opportunity.type),
-                if (opportunity.location.isNotEmpty) _buildTag(opportunity.location),
-                if (opportunity.category.isNotEmpty) _buildTag(opportunity.category),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Footer
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.access_time, color: AppColors.textSecondary, size: 14),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Posted ${_getTimeAgo(opportunity.createdAt)}',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                      ),
+                  Text(
+                    '${opportunity.applicationsCount} applied',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.darkRed,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
-                ),
-                Text(
-                  '${opportunity.applicationsCount} applied',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.darkRed,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -138,3 +149,4 @@ class OpportunityCard extends StatelessWidget {
     return 'Just now';
   }
 }
+

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:alu_spark/app/router/app_router.dart';
 import 'package:alu_spark/app/theme/app_theme.dart';
-import 'package:alu_spark/core/widgets/auth_wrapper.dart';
 
 class ALUSparkApp extends StatelessWidget {
   const ALUSparkApp({super.key});

@@ -222,30 +222,6 @@ class _StartupOnboardingScreenState
     );
   }
 
-  void _showToast(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              isError ? Icons.error_outline : Icons.check_circle_outline,
-              color: AppColors.white,
-              size: 18,
-            ),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white))),
-          ],
-        ),
-        backgroundColor: isError ? AppColors.darkRed : const Color(0xFF1B5E20),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     ref.listen(authNotifierProvider, _onStateChange);

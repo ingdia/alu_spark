@@ -17,8 +17,10 @@ import 'package:alu_spark/features/student_profile/data/repositories/student_rep
 import 'package:alu_spark/features/student_profile/domain/repositories/student_repository.dart';
 import 'package:alu_spark/features/bookmarks/data/repositories/bookmark_repository_impl.dart';
 import 'package:alu_spark/features/bookmarks/domain/repositories/bookmark_repository.dart';
+import 'package:alu_spark/core/services/notification_service.dart';
 
 final opportunityRepositoryProvider = Provider<OpportunityRepository>((ref) => OpportunityRepositoryImpl());
+final notificationServiceProvider = Provider<NotificationService>((ref) => NotificationService());
 final applicationRepositoryProvider = Provider<ApplicationRepository>((ref) => ApplicationRepositoryImpl());
 final startupRepositoryProvider = Provider<StartupRepository>((ref) => StartupRepositoryImpl());
 final userRepositoryProvider = Provider<UserRepository>((ref) => UserRepositoryImpl());

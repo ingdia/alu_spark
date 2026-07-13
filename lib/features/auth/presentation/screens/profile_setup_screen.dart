@@ -405,7 +405,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         borderRadius: 12,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         child: DropdownButtonFormField<String>(
-          value: _industry,
+          initialValue: _industry,
           dropdownColor: AppColors.darkBlueLight,
           style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
           icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),

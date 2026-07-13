@@ -3,13 +3,15 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:alu_spark/app/router/app_router.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
-import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/core/providers/repository_providers.dart';
-import 'package:alu_spark/core/services/storage_service.dart';
+import 'package:alu_spark/core/services/cloudinary_service.dart';
+import 'package:alu_spark/core/services/notification_service.dart';
+import 'package:alu_spark/core/constants/cloudinary_config.dart';
 import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 import 'package:alu_spark/features/applications/domain/entities/application.dart';
 import 'package:alu_spark/shared/enums/application_status.dart';
@@ -60,10 +62,9 @@ class _ApplyOpportunityScreenState extends ConsumerState<ApplyOpportunityScreen>
   Future<void> _handleSubmit() async {
     setState(() => _isSubmitting = true);
     try {
-      final currentUser = ref.read(authStateProvider).value;
+      final currentUser = fb.FirebaseAuth.instance.currentUser;
       if (currentUser == null) throw Exception('Not logged in');
 
-      // Upload CV to Firebase Storage and get the download URL
       String cvUrl = '';
       if (_pickedCv != null) {
         Uint8List? bytes = _pickedCv!.bytes;
@@ -71,14 +72,16 @@ class _ApplyOpportunityScreenState extends ConsumerState<ApplyOpportunityScreen>
           bytes = await File(_pickedCv!.path!).readAsBytes();
         }
         if (bytes != null) {
-          final ext = _pickedCv!.extension ?? 'pdf';
-          final path =
-              'cvs/${currentUser.id}/${widget.opportunity.id}_${DateTime.now().millisecondsSinceEpoch}.$ext';
-          cvUrl = await StorageService().uploadBytes(
-            path: path,
+          final url = await CloudinaryService(
+            cloudName: CloudinaryConfig.cloudName,
+            uploadPreset: CloudinaryConfig.cvUploadPreset,
+          ).uploadFile(
             bytes: bytes,
-            contentType: 'application/$ext',
+            fileName: _pickedCv!.name,
+            folder: 'cvs',
+            resourceType: 'raw',
           );
+          cvUrl = url ?? '';
         }
       }
 
@@ -88,9 +91,9 @@ class _ApplyOpportunityScreenState extends ConsumerState<ApplyOpportunityScreen>
         opportunityTitle: widget.opportunity.title,
         startupId: widget.opportunity.startupId,
         startupName: widget.opportunity.startupName,
-        studentId: currentUser.id,
-        studentName: currentUser.fullName,
-        studentEmail: currentUser.email,
+        studentId: currentUser.uid,
+        studentName: currentUser.displayName ?? '',
+        studentEmail: currentUser.email ?? '',
         motivation: _motivationController.text.trim(),
         cvUrl: cvUrl,
         status: ApplicationStatus.pending,
@@ -98,10 +101,14 @@ class _ApplyOpportunityScreenState extends ConsumerState<ApplyOpportunityScreen>
       );
 
       await ref.read(applicationRepositoryProvider).submitApplication(application);
-      // Increment the opportunity's application counter
-      await ref
-          .read(opportunityRepositoryProvider)
-          .incrementApplicationCount(widget.opportunity.id);
+      await ref.read(opportunityRepositoryProvider).incrementApplicationCount(widget.opportunity.id);
+
+      // Send notification to the startup founder
+      await NotificationService().notifyNewApplication(
+        startupId: widget.opportunity.startupId,
+        studentName: currentUser.displayName ?? currentUser.email?.split('@').first ?? 'A student',
+        opportunityTitle: widget.opportunity.title,
+      );
 
       if (mounted) _showSuccessDialog();
     } catch (e) {
