@@ -58,12 +58,26 @@ class MessageRepositoryImpl implements MessageRepository {
 
   @override
   Future<void> sendMessage(Message message) async {
-    final docRef = _firestore
-        .collection(_conversationsPath)
-        .doc(message.conversationId)
-        .collection('messages')
-        .doc();
+    // First, ensure the conversation document exists
+    final convRef = _firestore.collection(_conversationsPath).doc(message.conversationId);
+    final convDoc = await convRef.get();
 
+    if (!convDoc.exists) {
+      // Create the conversation with the two participants
+      // Extract participant IDs from the conversationId (sorted IDs joined by '_')
+      final parts = message.conversationId.split('_');
+      await convRef.set({
+        'participantIds': parts,
+        'participantName': 'Chat',
+        'lastMessage': message.text,
+        'lastMessageTime': FieldValue.serverTimestamp(),
+        'unreadCount': 0,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    // Add the message to the messages subcollection
+    final docRef = convRef.collection('messages').doc();
     await docRef.set({
       'senderId': message.senderId,
       'text': message.text,
@@ -72,7 +86,7 @@ class MessageRepositoryImpl implements MessageRepository {
     });
 
     // Update conversation metadata
-    await _firestore.collection(_conversationsPath).doc(message.conversationId).update({
+    await convRef.update({
       'lastMessage': message.text,
       'lastMessageTime': FieldValue.serverTimestamp(),
     });
@@ -83,5 +97,35 @@ class MessageRepositoryImpl implements MessageRepository {
     await _firestore.collection(_conversationsPath).doc(conversationId).update({
       'unreadCount': 0,
     });
+  }
+
+  /// Get or create a conversation between two users.
+  /// Returns the conversation ID.
+  Future<String> getOrCreateConversation({
+    required String currentUserId,
+    required String otherUserId,
+    required String otherUserName,
+  }) async {
+    final ids = [currentUserId, otherUserId]..sort();
+    final conversationId = '${ids[0]}_${ids[1]}';
+
+    final convRef = _firestore.collection(_conversationsPath).doc(conversationId);
+    final doc = await convRef.get();
+
+    if (!doc.exists) {
+      await convRef.set({
+        'participantIds': ids,
+        'participantName': otherUserName,
+        'lastMessage': '',
+        'lastMessageTime': FieldValue.serverTimestamp(),
+        'unreadCount': 0,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } else {
+      // Update the participant name if it changed
+      await convRef.update({'participantName': otherUserName});
+    }
+
+    return conversationId;
   }
 }
