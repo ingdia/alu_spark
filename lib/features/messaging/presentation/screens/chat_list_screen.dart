@@ -57,14 +57,14 @@ class ChatListScreen extends ConsumerWidget {
               message: error.toString(),
               onRetry: () => ref.invalidate(conversationsProvider(user.id)),
             ),
-            data: (conversations) => _buildContent(context, conversations),
+            data: (conversations) => _buildContent(context, conversations, ref),
           );
         },
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context, List<Conversation> conversations) {
+  Widget _buildContent(BuildContext context, List<Conversation> conversations, WidgetRef ref) {
     if (conversations.isEmpty) {
       return const EmptyStateWidget(
         icon: Icons.chat_bubble_outline,
@@ -75,7 +75,7 @@ class ChatListScreen extends ConsumerWidget {
     return ListView.builder(
       padding: const EdgeInsets.only(top: 4),
       itemCount: conversations.length,
-      itemBuilder: (context, index) => _buildConversationCard(context, conversations[index]),
+      itemBuilder: (context, index) => _buildConversationCard(context, conversations[index], ref),
     );
   }
 
@@ -94,13 +94,21 @@ class ChatListScreen extends ConsumerWidget {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  Widget _buildConversationCard(BuildContext context, Conversation conv) {
-    final bool hasUnread = conv.unreadCount > 0;
+  Widget _buildConversationCard(BuildContext context, Conversation conv, WidgetRef ref) {
+    final authState = ref.read(authStateProvider);
+    final currentUserId = authState.value?.id ?? '';
+    final String contactName = conv.participantNames.values.firstWhere(
+      (name) => name != 'Me',
+      orElse: () => conv.participantNames.values.isNotEmpty ? conv.participantNames.values.first : 'Unknown',
+    );
+    final bool hasUnread = conv.getUnreadCount(currentUserId) > 0;
+    final int unreadCount = conv.getUnreadCount(currentUserId);
+    
     return GestureDetector(
       onTap: () {
         Navigator.of(context).pushNamed(
           RouteNames.chatDetail,
-          arguments: {'contactId': conv.participantIds.first, 'contactName': conv.participantName},
+          arguments: {'contactId': conv.participantIds.firstWhere((id) => id != currentUserId, orElse: () => conv.participantIds.first), 'contactName': contactName},
         );
       },
       child: Container(
@@ -119,7 +127,7 @@ class ChatListScreen extends ConsumerWidget {
                   radius: 26,
                   backgroundColor: AppColors.darkRed.withValues(alpha: 0.2),
                   child: Text(
-                    conv.participantName.isNotEmpty ? conv.participantName[0].toUpperCase() : '?',
+                    contactName.isNotEmpty ? contactName[0].toUpperCase() : '?',
                     style: AppTextStyles.headingMedium.copyWith(color: AppColors.darkRed),
                   ),
                 ),
@@ -148,17 +156,17 @@ class ChatListScreen extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
-                        child: Text(
-                          conv.participantName,
-                          style: AppTextStyles.bodyLarge.copyWith(
-                            color: AppColors.white,
-                            fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
-                            fontSize: 16,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                  Expanded(
+                    child: Text(
+                      contactName,
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        color: AppColors.white,
+                        fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
+                        fontSize: 16,
                       ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                       Text(
                         _formatTime(conv.lastMessageTime),
                         style: AppTextStyles.bodyMedium.copyWith(
@@ -191,7 +199,7 @@ class ChatListScreen extends ConsumerWidget {
                             shape: BoxShape.circle,
                           ),
                           child: Text(
-                            '${conv.unreadCount}',
+                            '$unreadCount',
                             style: AppTextStyles.bodyMedium.copyWith(
                               color: AppColors.white,
                               fontSize: 10,

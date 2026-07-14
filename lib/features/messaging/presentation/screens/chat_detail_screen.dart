@@ -93,6 +93,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         id: '',
         conversationId: _conversationId!,
         senderId: currentUser.id,
+        senderName: currentUser.fullName,
         text: messageText,
         createdAt: DateTime.now(),
       );
@@ -197,6 +198,16 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                           _scrollToBottom(animated: false);
                         }
                       });
+                      
+                      // Mark messages as read when viewing them
+                      if (messages.isNotEmpty) {
+                        final authState = ref.read(authStateProvider);
+                        authState.whenData((user) {
+                          if (user != null) {
+                            ref.read(messageRepositoryProvider).markAsRead(_conversationId!, user.id);
+                          }
+                        });
+                      }
 
                       if (messages.isEmpty) {
                         return _buildEmptyChat();

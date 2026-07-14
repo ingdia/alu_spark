@@ -57,7 +57,7 @@ class MessagesScreen extends ConsumerWidget {
                       message: error.toString(),
                       onRetry: () => ref.invalidate(conversationsProvider(user.id)),
                     ),
-                    data: (conversations) => _buildContent(context, conversations),
+                    data: (conversations) => _buildContent(context, conversations, ref),
                   );
                 },
               ),
@@ -68,7 +68,10 @@ class MessagesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, List<Conversation> conversations) {
+  Widget _buildContent(BuildContext context, List<Conversation> conversations, WidgetRef ref) {
+    final authState = ref.read(authStateProvider);
+    final currentUserId = authState.value?.id ?? '';
+    
     if (conversations.isEmpty) {
       return Center(
         child: Padding(
@@ -123,19 +126,23 @@ class MessagesScreen extends ConsumerWidget {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       itemCount: conversations.length,
-      itemBuilder: (context, index) => _buildConversationCard(context, conversations[index]),
+      itemBuilder: (context, index) => _buildConversationCard(context, conversations[index], currentUserId),
     );
   }
 
-  Widget _buildConversationCard(BuildContext context, Conversation conv) {
-    final bool hasUnread = conv.unreadCount > 0;
+  Widget _buildConversationCard(BuildContext context, Conversation conv, String currentUserId) {
+    final String contactName = conv.participantNames.values.firstWhere(
+      (name) => name != 'Me',
+      orElse: () => conv.participantNames.values.isNotEmpty ? conv.participantNames.values.first : 'Unknown',
+    );
+    final bool hasUnread = conv.getUnreadCount(currentUserId) > 0;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GestureDetector(
         onTap: () {
           Navigator.of(context).pushNamed(
             RouteNames.chatDetail,
-            arguments: {'contactId': conv.participantIds.first, 'contactName': conv.participantName},
+            arguments: {'contactId': conv.participantIds.firstWhere((id) => id != currentUserId, orElse: () => conv.participantIds.first), 'contactName': contactName},
           );
         },
         child: GlassmorphicContainer(
@@ -148,7 +155,7 @@ class MessagesScreen extends ConsumerWidget {
                 radius: 24,
                 backgroundColor: AppColors.darkRed.withValues(alpha: 0.2),
                 child: Text(
-                  conv.participantName.isNotEmpty ? conv.participantName[0].toUpperCase() : '?',
+                  contactName.isNotEmpty ? contactName[0].toUpperCase() : '?',
                   style: AppTextStyles.headingMedium.copyWith(color: AppColors.darkRed),
                 ),
               ),
@@ -160,16 +167,16 @@ class MessagesScreen extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: Text(
-                            conv.participantName,
-                            style: AppTextStyles.bodyLarge.copyWith(
-                              color: AppColors.white,
-                              fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                      Expanded(
+                        child: Text(
+                          contactName,
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            color: AppColors.white,
+                            fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      ),
                         Text(
                           'Now',
                           style: AppTextStyles.bodyMedium.copyWith(
@@ -192,22 +199,22 @@ class MessagesScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (hasUnread)
-                Container(
-                  margin: const EdgeInsets.only(left: 8),
-                  padding: const EdgeInsets.all(6),
-                  decoration: const BoxDecoration(
-                    color: AppColors.darkRed,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    '${conv.unreadCount}',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.white,
-                      fontSize: 10,
-                    ),
-                  ),
-                ),
+                      if (hasUnread)
+                        Container(
+                          margin: const EdgeInsets.only(left: 8),
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: AppColors.darkRed,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '${conv.getUnreadCount(currentUserId)}',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.white,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ),
             ],
           ),
         ),

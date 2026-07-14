@@ -24,6 +24,10 @@ service cloud.firestore {
     function isVerified() {
       return isSignedIn() && (request.auth.token.email_verified == true || isAdmin());
     }
+    
+    function isAuthenticated() {
+      return isSignedIn();
+    }
 
     // ── Users ─────────────────────────────────────────────────────────────────
     // Any authenticated user can read their own doc.
@@ -84,15 +88,27 @@ service cloud.firestore {
     }
 
     // ── Messages / Chats ──────────────────────────────────────────────────────
-    match /chats/{chatId} {
-      allow read, write: if isVerified() &&
-        request.auth.uid in resource.data.participants;
+    match /conversations/{conversationId} {
+      // Allow read if user is a participant
+      allow read: if isAuthenticated() &&
+        request.auth.uid in resource.data.participantIds;
+      
+      // Allow create if user is a participant in the new document
+      allow create: if isAuthenticated() &&
+        request.auth.uid in request.resource.data.participantIds;
+      
+      // Allow update if user is a participant
+      allow update: if isAuthenticated() &&
+        request.auth.uid in resource.data.participantIds;
 
       match /messages/{msgId} {
-        allow read: if isVerified() &&
-          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
-        allow create: if isVerified() &&
-          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        // Allow read if user is a participant in the parent conversation
+        allow read: if isAuthenticated() &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        
+        // Allow create if user is a participant in the parent conversation
+        allow create: if isAuthenticated() &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
       }
     }
 

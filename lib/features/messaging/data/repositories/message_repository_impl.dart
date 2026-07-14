@@ -22,10 +22,12 @@ class MessageRepositoryImpl implements MessageRepository {
         return Conversation(
           id: doc.id,
           participantIds: List<String>.from(data['participantIds'] ?? []),
+          participantNames: Map<String, String>.from(data['participantNames'] ?? {}),
+          participantRoles: Map<String, String>.from(data['participantRoles'] ?? {}),
           lastMessage: data['lastMessage'] ?? '',
           lastMessageTime: (data['lastMessageTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
-          unreadCount: data['unreadCount'] ?? 0,
-          participantName: data['participantName'] ?? 'Unknown',
+          unreadCounts: Map<String, int>.from(data['unreadCounts'] ?? {}),
+          opportunityId: data['opportunityId'],
         );
       }).toList();
       list.sort((a, b) => b.lastMessageTime.compareTo(a.lastMessageTime));
@@ -48,9 +50,11 @@ class MessageRepositoryImpl implements MessageRepository {
           id: doc.id,
           conversationId: conversationId,
           senderId: data['senderId'] ?? '',
+          senderName: data['senderName'] ?? '',
           text: data['text'] ?? '',
           createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
           isRead: data['isRead'] ?? false,
+          readBy: List<String>.from(data['readBy'] ?? []),
         );
       }).toList();
     });
@@ -58,34 +62,32 @@ class MessageRepositoryImpl implements MessageRepository {
 
   @override
   Future<void> sendMessage(Message message) async {
-    // First, ensure the conversation document exists
     final convRef = _firestore.collection(_conversationsPath).doc(message.conversationId);
     final convDoc = await convRef.get();
 
     if (!convDoc.exists) {
-      // Create the conversation with the two participants
-      // Extract participant IDs from the conversationId (sorted IDs joined by '_')
       final parts = message.conversationId.split('_');
       await convRef.set({
         'participantIds': parts,
-        'participantName': 'Chat',
+        'participantNames': {parts[0]: 'Me', parts[1]: 'User'},
+        'participantRoles': {},
         'lastMessage': message.text,
         'lastMessageTime': FieldValue.serverTimestamp(),
-        'unreadCount': 0,
+        'unreadCounts': {parts[0]: 0, parts[1]: 1},
+        'opportunityId': null,
         'createdAt': FieldValue.serverTimestamp(),
       });
     }
 
-    // Add the message to the messages subcollection
-    final docRef = convRef.collection('messages').doc();
-    await docRef.set({
+    await convRef.collection('messages').doc().set({
       'senderId': message.senderId,
+      'senderName': message.senderName,
       'text': message.text,
       'createdAt': FieldValue.serverTimestamp(),
       'isRead': false,
+      'readBy': [],
     });
 
-    // Update conversation metadata
     await convRef.update({
       'lastMessage': message.text,
       'lastMessageTime': FieldValue.serverTimestamp(),
@@ -93,14 +95,12 @@ class MessageRepositoryImpl implements MessageRepository {
   }
 
   @override
-  Future<void> markAsRead(String conversationId) async {
+  Future<void> markAsRead(String conversationId, String userId) async {
     await _firestore.collection(_conversationsPath).doc(conversationId).update({
-      'unreadCount': 0,
+      'unreadCounts.$userId': 0,
     });
   }
 
-  /// Get or create a conversation between two users.
-  /// Returns the conversation ID.
   Future<String> getOrCreateConversation({
     required String currentUserId,
     required String otherUserId,
@@ -115,15 +115,16 @@ class MessageRepositoryImpl implements MessageRepository {
     if (!doc.exists) {
       await convRef.set({
         'participantIds': ids,
-        'participantName': otherUserName,
+        'participantNames': {ids[0]: 'User', ids[1]: otherUserName},
+        'participantRoles': {},
         'lastMessage': '',
         'lastMessageTime': FieldValue.serverTimestamp(),
-        'unreadCount': 0,
+        'unreadCounts': {ids[0]: 0, ids[1]: 0},
+        'opportunityId': null,
         'createdAt': FieldValue.serverTimestamp(),
       });
     } else {
-      // Update the participant name if it changed
-      await convRef.update({'participantName': otherUserName});
+      await convRef.update({'participantNames.${ids[1]}': otherUserName});
     }
 
     return conversationId;
