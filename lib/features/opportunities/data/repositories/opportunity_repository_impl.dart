@@ -15,9 +15,8 @@ class OpportunityRepositoryImpl implements OpportunityRepository {
     return _firestore
         .collection(_collection)
         .where('isActive', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => OpportunityModel.fromFirestore(d).toEntity()).toList());
+        .map((s) { final l = s.docs.map((d) => OpportunityModel.fromFirestore(d).toEntity()).toList(); l.sort((a,b) => b.createdAt.compareTo(a.createdAt)); return l; });
   }
 
   @override
@@ -26,9 +25,8 @@ class OpportunityRepositoryImpl implements OpportunityRepository {
         .collection(_collection)
         .where('isActive', isEqualTo: true)
         .where('category', isEqualTo: category)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => OpportunityModel.fromFirestore(d).toEntity()).toList());
+        .map((s) { final l = s.docs.map((d) => OpportunityModel.fromFirestore(d).toEntity()).toList(); l.sort((a,b) => b.createdAt.compareTo(a.createdAt)); return l; });
   }
 
   @override

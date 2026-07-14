@@ -10,6 +10,10 @@ class Startup {
   final int openRolesCount;
   final bool isVerified;
   final DateTime createdAt;
+  final String website;
+  final String linkedin;
+  final String stage;
+  final String teamSize;
 
   Startup({
     required this.id,
@@ -23,5 +27,9 @@ class Startup {
     this.openRolesCount = 0,
     this.isVerified = false,
     required this.createdAt,
+    this.website = '',
+    this.linkedin = '',
+    this.stage = '',
+    this.teamSize = '',
   });
 }

@@ -14,10 +14,9 @@ class UserRepositoryImpl implements UserRepository {
   Stream<List<User>> getAllUsers() {
     return _firestore
         .collection(_collectionPath)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
+      final users = snapshot.docs.map((doc) {
         final data = doc.data();
         return User(
           id: doc.id,
@@ -31,6 +30,8 @@ class UserRepositoryImpl implements UserRepository {
           isEmailVerified: data['isEmailVerified'] ?? false,
         );
       }).toList();
+      users.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return users;
     });
   }
 
@@ -39,10 +40,9 @@ class UserRepositoryImpl implements UserRepository {
     return _firestore
         .collection(_collectionPath)
         .where('role', isEqualTo: role)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
+      final users = snapshot.docs.map((doc) {
         final data = doc.data();
         return User(
           id: doc.id,
@@ -56,6 +56,8 @@ class UserRepositoryImpl implements UserRepository {
           isEmailVerified: data['isEmailVerified'] ?? false,
         );
       }).toList();
+      users.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return users;
     });
   }
 

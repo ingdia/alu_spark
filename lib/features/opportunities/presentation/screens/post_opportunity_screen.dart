@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
+import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/core/providers/repository_providers.dart';
 import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 
@@ -51,12 +53,21 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
     setState(() => _isPosting = true);
 
     try {
-      // TODO: Replace with actual logged-in founder's startup ID and name once Startup Profile is built
-      final startupId = 'dummy_startup_id_123'; 
-      final startupName = 'TechStart'; 
+      final authState = ref.read(authStateProvider);
+      final currentUser = authState.value;
+      if (currentUser == null) throw Exception('Not logged in');
+
+      // Read startup info from Firestore for the logged-in founder
+      final startupDoc = await FirebaseFirestore.instance
+          .collection('startups')
+          .doc(currentUser.id)
+          .get();
+      final startupData = startupDoc.data();
+      final startupId = currentUser.id;
+      final startupName = startupData?['startupName'] as String? ?? currentUser.fullName;
 
       final opportunity = Opportunity(
-        id: '', // Repository will generate the actual Firestore ID
+        id: '',
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         startupId: startupId,
@@ -74,29 +85,39 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Opportunity posted successfully!'),
-            backgroundColor: AppColors.darkRed,
+          SnackBar(
+            content: Row(children: [
+              const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+              const SizedBox(width: 10),
+              Text('Opportunity posted successfully!',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white)),
+            ]),
+            backgroundColor: const Color(0xFF1B5E20),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
           ),
         );
-        
-        // Clear form and go back
         _titleController.clear();
         _descriptionController.clear();
         _salaryController.clear();
-        setState(() {
-          _requirements.clear();
-          _benefits.clear();
-        });
-        
+        setState(() { _requirements.clear(); _benefits.clear(); });
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to post: $e'),
-            backgroundColor: Colors.red,
+            content: Row(children: [
+              const Icon(Icons.error_outline, color: Colors.white, size: 18),
+              const SizedBox(width: 10),
+              Expanded(child: Text('Failed to post: $e',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white))),
+            ]),
+            backgroundColor: AppColors.darkRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -123,6 +144,7 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
                 controller: _titleController,
                 hintText: 'Opportunity Title (e.g., Frontend Developer)',
                 prefixIcon: Icons.work_outline,
+                required: true,
               ),
               const SizedBox(height: 16),
               Row(
@@ -168,6 +190,7 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
                 hintText: 'Describe the role, responsibilities, and goals...',
                 prefixIcon: Icons.description_outlined,
                 maxLines: 5,
+                required: true,
               ),
               const SizedBox(height: 32),
 
@@ -238,20 +261,25 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
     required String hintText,
     IconData? prefixIcon,
     int maxLines = 1,
+    bool required = false,
   }) {
     return GlassmorphicContainer(
       blur: 10,
       borderRadius: 12,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: TextField(
+      child: TextFormField(
         controller: controller,
         maxLines: maxLines,
         style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
+        validator: required
+            ? (v) => (v == null || v.trim().isEmpty) ? 'This field is required' : null
+            : null,
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
           prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: AppColors.darkRed) : null,
           border: InputBorder.none,
+          errorStyle: const TextStyle(color: Color(0xFFFF6B6B)),
           contentPadding: const EdgeInsets.symmetric(vertical: 16),
         ),
       ),

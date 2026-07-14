@@ -27,6 +27,13 @@ import 'package:alu_spark/features/messaging/presentation/screens/chat_list_scre
 import 'package:alu_spark/features/messaging/presentation/screens/chat_detail_screen.dart';
 import 'package:alu_spark/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:alu_spark/features/bookmarks/presentation/screens/bookmarks_screen.dart';
+import 'package:alu_spark/features/auth/presentation/screens/role_selection_screen.dart';
+import 'package:alu_spark/features/auth/presentation/screens/startup_onboarding_screen.dart';
+import 'package:alu_spark/features/auth/presentation/screens/startup_pending_screen.dart';
+import 'package:alu_spark/features/auth/presentation/screens/student_onboarding_screen.dart';
+import 'package:alu_spark/features/auth/presentation/screens/profile_setup_screen.dart';
+
+import 'package:alu_spark/core/widgets/auth_wrapper.dart';
 
 class RouteNames {
   static const String splash = '/splash';
@@ -53,18 +60,27 @@ class RouteNames {
   static const String chatDetail = '/chat-detail';
   static const String notifications = '/notifications';
   static const String bookmarks = '/bookmarks';
+  static const String roleSelection = '/role-selection';
+  static const String startupPending = '/startup-pending';
+  static const String startupOnboarding = '/startup-onboarding';
+  static const String studentOnboarding = '/student-onboarding';
+  static const String profileSetup = '/profile-setup';
 }
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
+      case '/': return MaterialPageRoute(builder: (_) => const AuthWrapper());
       case RouteNames.splash: return MaterialPageRoute(builder: (_) => const SplashScreen());
       case RouteNames.onboarding: return MaterialPageRoute(builder: (_) => const OnboardingScreen());
       case RouteNames.login: return MaterialPageRoute(builder: (_) => const LoginScreen());
       case RouteNames.register: return MaterialPageRoute(builder: (_) => const RegisterScreen());
       case RouteNames.otpVerification:
-        final email = settings.arguments as String? ?? '';
-        return MaterialPageRoute(builder: (_) => OtpVerificationScreen(email: email));
+        final args = settings.arguments as Map<String, String>? ?? {};
+        return MaterialPageRoute(builder: (_) => OtpVerificationScreen(email: args['email'] ?? '', name: args['name'] ?? ''));
+      case RouteNames.profileSetup:
+        final psArgs = settings.arguments as Map<String, String>? ?? {};
+        return MaterialPageRoute(builder: (_) => ProfileSetupScreen(name: psArgs['name'] ?? '', email: psArgs['email'] ?? ''));
       case RouteNames.home: return MaterialPageRoute(builder: (_) => const HomeShell());
       case RouteNames.discover: return MaterialPageRoute(builder: (_) => const DiscoverScreen());
       case RouteNames.search: return MaterialPageRoute(builder: (_) => const SearchScreen());
@@ -101,6 +117,10 @@ class AppRouter {
         
       case RouteNames.notifications: return MaterialPageRoute(builder: (_) => const NotificationsScreen());
       case RouteNames.bookmarks: return MaterialPageRoute(builder: (_) => const BookmarksScreen());
+      case RouteNames.roleSelection: return MaterialPageRoute(builder: (_) => const RoleSelectionScreen());
+      case RouteNames.startupOnboarding: return MaterialPageRoute(builder: (_) => const StartupOnboardingScreen());
+      case RouteNames.startupPending: return MaterialPageRoute(builder: (_) => const StartupPendingScreen());
+      case RouteNames.studentOnboarding: return MaterialPageRoute(builder: (_) => const StudentOnboardingScreen());
 
       default:
         return MaterialPageRoute(

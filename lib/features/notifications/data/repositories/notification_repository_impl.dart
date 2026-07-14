@@ -15,12 +15,13 @@ class NotificationRepositoryImpl implements NotificationRepository {
     return _firestore
         .collection(_collectionPath)
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
+      final list = snapshot.docs
           .map((doc) => NotificationModel.fromFirestore(doc).toEntity())
           .toList();
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list;
     });
   }
 

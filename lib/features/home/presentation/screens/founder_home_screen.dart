@@ -2,20 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
+import 'package:alu_spark/app/router/app_router.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/core/widgets/alu_logo.dart';
+import 'package:alu_spark/core/widgets/loading_widget.dart';
+import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/features/applications/presentation/providers/application_provider.dart';
 import 'package:alu_spark/features/applications/domain/entities/application.dart';
+import 'package:alu_spark/features/opportunities/presentation/providers/opportunity_provider.dart';
 import 'package:alu_spark/shared/enums/application_status.dart';
 
 class FounderHomeScreen extends ConsumerWidget {
   const FounderHomeScreen({super.key});
 
-  static const _dummyStartupId = 'dummy_startup_id_123';
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final applicationsAsync = ref.watch(applicationsByStartupProvider(_dummyStartupId));
+    final authState = ref.watch(authStateProvider);
+    final currentUser = authState.value;
+
+    if (currentUser == null) return const LoadingWidget(message: 'Loading...');
+
+    final startupId = currentUser.id;
+    final applicationsAsync = ref.watch(applicationsByStartupProvider(startupId));
+    final opportunitiesAsync = ref.watch(opportunitiesByStartupProvider(startupId));
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
@@ -30,19 +39,23 @@ class FounderHomeScreen extends ConsumerWidget {
               applicationsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator(color: AppColors.darkRed)),
                 error: (e, _) => Text('$e', style: const TextStyle(color: Colors.red)),
-                data: (applications) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildQuickStats(applications),
-                    const SizedBox(height: 32),
-                    _buildSectionHeader('Quick Actions'),
-                    const SizedBox(height: 16),
-                    _buildQuickActions(),
-                    const SizedBox(height: 32),
-                    _buildSectionHeader('Recent Applications'),
-                    const SizedBox(height: 16),
-                    _buildRecentApplications(applications),
-                  ],
+                data: (applications) => opportunitiesAsync.when(
+                  loading: () => const SizedBox.shrink(),
+                error: (_, _e) => const SizedBox.shrink(),
+                  data: (opportunities) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildQuickStats(applications, opportunities.length),
+                      const SizedBox(height: 32),
+                      _buildSectionHeader('Quick Actions'),
+                      const SizedBox(height: 16),
+                      _buildQuickActions(context),
+                      const SizedBox(height: 32),
+                      _buildSectionHeader('Recent Applications'),
+                      const SizedBox(height: 16),
+                      _buildRecentApplications(applications),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -71,13 +84,13 @@ class FounderHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickStats(List<Application> applications) {
+  Widget _buildQuickStats(List<Application> applications, int postedCount) {
     final newCount = applications.where((a) => a.status == ApplicationStatus.pending).length;
     return Row(
       children: [
         _StatCard(title: 'Received', count: '${applications.length}', icon: Icons.people_outline),
         _StatCard(title: 'New', count: '$newCount', icon: Icons.mark_email_unread_outlined),
-        const _StatCard(title: 'Posted', count: '4', icon: Icons.work_outline),
+        _StatCard(title: 'Posted', count: '$postedCount', icon: Icons.work_outline),
       ],
     );
   }
@@ -95,12 +108,12 @@ class FounderHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickActions() {
+  Widget _buildQuickActions(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _ActionButton(title: 'Post Opportunity', icon: Icons.add_circle_outline, onTap: () {})),
+        Expanded(child: _ActionButton(title: 'Post Opportunity', icon: Icons.add_circle_outline, onTap: () => Navigator.of(context).pushNamed(RouteNames.postOpportunity))),
         const SizedBox(width: 16),
-        Expanded(child: _ActionButton(title: 'Manage Profile', icon: Icons.business_outlined, onTap: () {})),
+        Expanded(child: _ActionButton(title: 'Manage Profile', icon: Icons.business_outlined, onTap: () => Navigator.of(context).pushNamed(RouteNames.startupProfileEdit))),
       ],
     );
   }

@@ -53,7 +53,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           AdminUserManagementScreen(),
           AdminVerificationScreen(),
           AdminAnalyticsScreen(),
-          DiscoverScreen(),
+          _AdminSettingsScreen(),
         ];
       case UserRole.student:
         return const [
@@ -82,7 +82,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           _NavItem(Icons.people_outline, 'Users'),
           _NavItem(Icons.verified_outlined, 'Verify'),
           _NavItem(Icons.bar_chart_outlined, 'Analytics'),
-          _NavItem(Icons.explore_outlined, 'Discover'),
+          _NavItem(Icons.settings_outlined, 'Settings'),
         ];
       case UserRole.student:
         return [
@@ -230,43 +230,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16, top: 8),
-            child: GestureDetector(
-              onTap: () => _showRoleSwitcher(context, role),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.glassWhite,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.borderGlass),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      role == UserRole.student
-                          ? Icons.school_outlined
-                          : role == UserRole.founder
-                              ? Icons.rocket_launch_outlined
-                              : Icons.admin_panel_settings_outlined,
-                      color: AppColors.darkRed,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      role.name[0].toUpperCase() + role.name.substring(1),
-                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white, fontSize: 12),
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.swap_horiz, color: AppColors.textSecondary, size: 14),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
+        actions: const [],
       ),
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
@@ -366,4 +330,93 @@ class _NavItem {
   final IconData icon;
   final String label;
   const _NavItem(this.icon, this.label);
+}
+
+class _AdminSettingsScreen extends ConsumerWidget {
+  const _AdminSettingsScreen();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Scaffold(
+      backgroundColor: AppColors.darkBlue,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Settings', style: AppTextStyles.headingLarge.copyWith(color: AppColors.white)),
+              const SizedBox(height: 32),
+              _tile(
+                icon: Icons.admin_panel_settings_outlined,
+                label: 'Admin Account',
+                sub: 'ngabirediane02@gmail.com',
+              ),
+              const SizedBox(height: 12),
+              _tile(
+                icon: Icons.info_outline,
+                label: 'App Version',
+                sub: '1.0.0',
+              ),
+              const SizedBox(height: 32),
+              GestureDetector(
+                onTap: () async {
+                  await ref.read(authRepositoryProvider).signOut();
+                  if (context.mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      AppRouter.generateRoute(const RouteSettings(name: RouteNames.splash)),
+                      (_) => false,
+                    );
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.darkRed.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.darkRed.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.logout, color: AppColors.darkRed, size: 22),
+                      const SizedBox(width: 16),
+                      Text('Log Out',
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            color: AppColors.darkRed,
+                            fontWeight: FontWeight.w600,
+                          )),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tile({required IconData icon, required String label, required String sub}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.glassWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderGlass),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.darkRed, size: 22),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white)),
+              Text(sub, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary, fontSize: 12)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }

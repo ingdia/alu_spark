@@ -15,12 +15,13 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     return _firestore
         .collection(_collectionPath)
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
+      final list = snapshot.docs
           .map((doc) => BookmarkModel.fromFirestore(doc).toEntity())
           .toList();
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list;
     });
   }
 

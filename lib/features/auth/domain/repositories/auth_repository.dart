@@ -26,7 +26,8 @@ abstract class AuthRepository {
     required String teamSize,
     required List<Map<String, String>> founders,
     required String description,
-    required String proofFilePath,
+    String? proofFilePath,
+    List<int>? proofFileBytes,
     required String proofFileName,
   });
 

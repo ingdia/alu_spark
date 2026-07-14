@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/app/router/app_router.dart';
-import 'package:alu_spark/core/providers/firebase_providers.dart';
-import 'package:alu_spark/core/providers/role_provider.dart';
 import 'package:alu_spark/core/widgets/alu_logo.dart';
 import 'package:alu_spark/features/auth/presentation/providers/auth_provider.dart';
 import 'package:alu_spark/features/auth/presentation/providers/auth_state.dart';
@@ -32,19 +30,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _onStateChange(AuthState? previous, AuthState next) {
     if (next.status == AuthStatus.success) {
       ref.read(authNotifierProvider.notifier).reset();
-      // Sync the real role from Firestore before navigating
-      final user = ref.read(authRepositoryProvider).currentUser;
-      if (user != null) {
-        ref.read(roleProvider.notifier).setRole(user.role);
-      }
-      Navigator.pushNamedAndRemoveUntil(context, RouteNames.home, (_) => false);
-    } else if (next.status == AuthStatus.error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(next.errorMessage ?? 'An error occurred'),
-          backgroundColor: AppColors.darkRed,
-        ),
+      // Navigate back to AuthWrapper — it reads Firestore and routes correctly
+      // (home for students/approved founders, startupPending for pending founders)
+      Navigator.of(context).pushAndRemoveUntil(
+        AppRouter.generateRoute(const RouteSettings(name: '/')),
+        (_) => false,
       );
+    } else if (next.status == AuthStatus.error) {
+      _showToast(next.errorMessage ?? 'An error occurred', isError: true);
       ref.read(authNotifierProvider.notifier).reset();
     }
   }
@@ -60,12 +53,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _handleForgotPassword() {
     final email = _emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid email address first')),
-      );
+      _showToast('Please enter a valid email address first', isError: true);
       return;
     }
     ref.read(authNotifierProvider.notifier).forgotPassword(email: email);
+  }
+
+  void _showToast(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline : Icons.check_circle_outline,
+              color: AppColors.white,
+              size: 18,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(message,
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white)),
+            ),
+          ],
+        ),
+        backgroundColor: isError ? AppColors.darkRed : const Color(0xFF1B5E20),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   @override

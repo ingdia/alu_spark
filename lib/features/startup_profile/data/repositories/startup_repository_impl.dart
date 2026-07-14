@@ -25,12 +25,13 @@ class StartupRepositoryImpl implements StartupRepository {
     return _firestore
         .collection(_collectionPath)
         .where('isVerified', isEqualTo: false)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
+      final list = snapshot.docs
           .map((doc) => StartupModel.fromFirestore(doc).toEntity())
           .toList();
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list;
     });
   }
 
