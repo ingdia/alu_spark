@@ -2,13 +2,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:alu_spark/features/applications/domain/entities/application.dart';
 import 'package:alu_spark/features/applications/domain/repositories/application_repository.dart';
 import 'package:alu_spark/shared/enums/application_status.dart';
+import 'package:alu_spark/core/services/notification_service.dart';
 
 class ApplicationRepositoryImpl implements ApplicationRepository {
   final FirebaseFirestore _firestore;
+  final NotificationService _notifications;
   static const _collection = 'applications';
 
-  ApplicationRepositoryImpl({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  ApplicationRepositoryImpl({
+    FirebaseFirestore? firestore,
+    NotificationService? notifications,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _notifications = notifications ?? NotificationService();
 
   Application _fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
@@ -122,30 +127,145 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
   @override
   Future<void> withdrawApplication(String applicationId) async {
     await _validateTransition(applicationId, ApplicationStatus.withdrawn);
+    final doc = await _firestore.collection(_collection).doc(applicationId).get();
+    final data = doc.data() as Map<String, dynamic>;
+
     await _firestore.collection(_collection).doc(applicationId).update({
       'status': ApplicationStatus.withdrawn.firestoreValue,
       'updatedAt': Timestamp.fromDate(DateTime.now()),
     });
+
+    // Notify the startup founder that the student withdrew.
+    await _notifications.notifyWithdrawn(
+      startupId: data['startupId'] as String? ?? '',
+      studentName: data['studentName'] as String? ?? 'A student',
+      opportunityTitle: data['opportunityTitle'] as String? ?? '',
+      applicationId: applicationId,
+    );
   }
 
   @override
   Future<void> updateApplicationStatus(
       String applicationId, ApplicationStatus next) async {
     await _validateTransition(applicationId, next);
+    final doc = await _firestore.collection(_collection).doc(applicationId).get();
+    final data = doc.data() as Map<String, dynamic>;
+
     await _firestore.collection(_collection).doc(applicationId).update({
       'status': next.firestoreValue,
       'updatedAt': Timestamp.fromDate(DateTime.now()),
     });
+
+    final studentId = data['studentId'] as String? ?? '';
+    final opportunityTitle = data['opportunityTitle'] as String? ?? '';
+    final startupName = data['startupName'] as String? ?? '';
+
+    switch (next) {
+      case ApplicationStatus.underReview:
+        await _notifications.notifyUnderReview(
+          studentId: studentId,
+          opportunityTitle: opportunityTitle,
+          applicationId: applicationId,
+        );
+      case ApplicationStatus.interview:
+        await _notifications.notifyInterviewScheduled(
+          studentId: studentId,
+          opportunityTitle: opportunityTitle,
+          startupName: startupName,
+          applicationId: applicationId,
+        );
+      case ApplicationStatus.accepted:
+        await _notifications.notifyAccepted(
+          studentId: studentId,
+          opportunityTitle: opportunityTitle,
+          startupName: startupName,
+          applicationId: applicationId,
+        );
+      case ApplicationStatus.rejected:
+        await _notifications.notifyRejected(
+          studentId: studentId,
+          opportunityTitle: opportunityTitle,
+          applicationId: applicationId,
+        );
+      default:
+        break;
+    }
   }
 
-  /// Reads the current status from Firestore and throws if the transition
-  /// from current → [next] is not permitted by the lifecycle rules.
+  @override
+  Future<void> updateApplicationWithInterview({
+    required String applicationId,
+    required ApplicationStatus status,
+    DateTime? interviewDate,
+    String? interviewTime,
+    String? interviewLocation,
+    String? meetingLink,
+    String? interviewNotes,
+  }) async {
+    // Read current doc to determine if this is a new interview or an update.
+    final doc =
+        await _firestore.collection(_collection).doc(applicationId).get();
+    if (!doc.exists) throw Exception('Application not found.');
+    final data = doc.data() as Map<String, dynamic>;
+    final current =
+        ApplicationStatus.fromFirestore(data['status'] as String?);
+    final isNewInterview = current != ApplicationStatus.interview;
+
+    if (isNewInterview) {
+      await _validateTransition(applicationId, status);
+    }
+
+    final update = <String, dynamic>{
+      'status': status.firestoreValue,
+      'updatedAt': Timestamp.fromDate(DateTime.now()),
+    };
+    if (interviewDate != null) {
+      update['interviewDate'] = Timestamp.fromDate(interviewDate);
+    }
+    if (interviewTime != null) update['interviewTime'] = interviewTime;
+    if (interviewLocation != null) {
+      update['interviewLocation'] = interviewLocation;
+    }
+    if (meetingLink != null) update['meetingLink'] = meetingLink;
+    if (interviewNotes != null) update['interviewNotes'] = interviewNotes;
+
+    await _firestore.collection(_collection).doc(applicationId).update(update);
+
+    final studentId = data['studentId'] as String? ?? '';
+    final opportunityTitle = data['opportunityTitle'] as String? ?? '';
+    final startupName = data['startupName'] as String? ?? '';
+
+    String? dateLabel;
+    if (interviewDate != null) {
+      const months = [
+        '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      dateLabel =
+          '${interviewDate.day} ${months[interviewDate.month]} ${interviewDate.year}';
+    }
+
+    if (isNewInterview) {
+      await _notifications.notifyInterviewScheduled(
+        studentId: studentId,
+        opportunityTitle: opportunityTitle,
+        startupName: startupName,
+        interviewDate: dateLabel,
+        applicationId: applicationId,
+      );
+    } else {
+      await _notifications.notifyInterviewUpdated(
+        studentId: studentId,
+        opportunityTitle: opportunityTitle,
+        applicationId: applicationId,
+      );
+    }
+  }
+
   Future<void> _validateTransition(
       String applicationId, ApplicationStatus next) async {
-    final doc = await _firestore
-        .collection(_collection)
-        .doc(applicationId)
-        .get();
+    final doc =
+        await _firestore.collection(_collection).doc(applicationId).get();
     if (!doc.exists) throw Exception('Application not found.');
     final data = doc.data() as Map<String, dynamic>;
     final current =
@@ -157,7 +277,6 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
     }
   }
 
-  // kept for internal use by other features
   Stream<List<Application>> getApplicationsByOpportunity(
       String opportunityId) {
     return _firestore

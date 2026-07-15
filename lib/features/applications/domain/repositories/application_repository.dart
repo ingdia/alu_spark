@@ -9,4 +9,13 @@ abstract class ApplicationRepository {
   Stream<Application?> getApplicationForOpportunity(String studentId, String opportunityId);
   Future<void> withdrawApplication(String applicationId);
   Future<void> updateApplicationStatus(String applicationId, ApplicationStatus status);
+  Future<void> updateApplicationWithInterview({
+    required String applicationId,
+    required ApplicationStatus status,
+    DateTime? interviewDate,
+    String? interviewTime,
+    String? interviewLocation,
+    String? meetingLink,
+    String? interviewNotes,
+  });
 }
