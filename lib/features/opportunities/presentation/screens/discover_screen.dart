@@ -128,11 +128,18 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           scrollDirection: Axis.horizontal,
           itemCount: featured.length,
           itemBuilder: (context, index) {
+            final opp = featured[index];
             return Padding(
               padding: const EdgeInsets.only(right: 16),
               child: SizedBox(
                 width: MediaQuery.of(context).size.width * 0.75,
-                child: OpportunityCard(opportunity: featured[index]),
+                child: OpportunityCard(
+                  opportunity: opp,
+                  onTap: () => Navigator.of(context).pushNamed(
+                    RouteNames.opportunityDetail,
+                    arguments: opp,
+                  ),
+                ),
               ),
             );
           },
@@ -172,7 +179,13 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
         children: displayData.map((opportunity) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: OpportunityCard(opportunity: opportunity),
+            child: OpportunityCard(
+              opportunity: opportunity,
+              onTap: () => Navigator.of(context).pushNamed(
+                RouteNames.opportunityDetail,
+                arguments: opportunity,
+              ),
+            ),
           );
         }).toList(),
       );

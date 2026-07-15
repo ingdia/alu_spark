@@ -59,10 +59,21 @@ class SearchState {
 class SearchNotifier extends Notifier<SearchState> {
   @override
   SearchState build() {
-    // Listen to opportunities stream and update allOpportunities
-    ref.watch(opportunityRepositoryProvider).getOpportunities().listen((list) {
-      state = state.copyWith(allOpportunities: list);
+    // ref.watch on a StreamProvider — Riverpod manages the subscription
+    // lifetime automatically. No manual listen() / cancel() needed.
+    final opportunitiesAsync = ref.watch(
+      // Reuse the existing autoDispose stream provider so we share the
+      // single Firestore listener already open for DiscoverScreen.
+      _allOpportunitiesProvider,
+    );
+
+    opportunitiesAsync.whenData((list) {
+      // Only update if the list actually changed to avoid spurious rebuilds.
+      if (state.allOpportunities != list) {
+        state = state.copyWith(allOpportunities: list);
+      }
     });
+
     return const SearchState();
   }
 
@@ -70,8 +81,19 @@ class SearchNotifier extends Notifier<SearchState> {
   void setCategory(String category) => state = state.copyWith(selectedCategory: category);
   void setLocation(String location) => state = state.copyWith(selectedLocation: location);
   void setType(String type) => state = state.copyWith(selectedType: type);
-  void reset() => state = state.copyWith(query: '', selectedCategory: 'All', selectedLocation: 'Anywhere', selectedType: 'Any');
+  void reset() => state = state.copyWith(
+        query: '',
+        selectedCategory: 'All',
+        selectedLocation: 'Anywhere',
+        selectedType: 'Any',
+      );
 }
+
+// Private provider — shares the Firestore stream with DiscoverScreen's
+// recentOpportunitiesProvider without opening a second listener.
+final _allOpportunitiesProvider = StreamProvider.autoDispose<List<Opportunity>>((ref) {
+  return ref.watch(opportunityRepositoryProvider).getOpportunities();
+});
 
 final searchProvider = NotifierProvider<SearchNotifier, SearchState>(
   SearchNotifier.new,

@@ -73,6 +73,17 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
         .map((s) => s.docs.map(_fromDoc).toList());
   }
 
+  @override
+  Future<bool> hasApplied(String studentId, String opportunityId) async {
+    final snap = await _firestore
+        .collection(_collection)
+        .where('studentId', isEqualTo: studentId)
+        .where('opportunityId', isEqualTo: opportunityId)
+        .limit(1)
+        .get();
+    return snap.docs.isNotEmpty;
+  }
+
   Stream<List<Application>> getApplicationsByOpportunity(String opportunityId) {
     return _firestore
         .collection(_collection)
