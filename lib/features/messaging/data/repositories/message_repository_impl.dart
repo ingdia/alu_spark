@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:alu_spark/features/messaging/data/repositories/local_message_store.dart';
 import 'package:alu_spark/features/messaging/domain/entities/conversation.dart';
 import 'package:alu_spark/features/messaging/domain/entities/message.dart';
@@ -9,11 +8,15 @@ class MessageRepositoryImpl implements MessageRepository {
 
   MessageRepositoryImpl(this._store);
 
-  // ── Streams derived from StateNotifier ────────────────────────────────────
+  /// Emits the current state immediately, then every subsequent update.
+  Stream<MessagingState> get _states async* {
+    yield _store.state;
+    yield* _store.stateStream;
+  }
 
   @override
   Stream<List<Conversation>> getConversations(String userId) {
-    return _store.stream.map((s) => s.conversations
+    return _states.map((s) => s.conversations
         .where((c) => c.participantIds.contains(userId))
         .toList()
       ..sort((a, b) => b.lastMessageTime.compareTo(a.lastMessageTime)));
@@ -21,13 +24,12 @@ class MessageRepositoryImpl implements MessageRepository {
 
   @override
   Stream<List<Message>> getMessages(String conversationId) {
-    return _store.stream
-        .map((s) => s.messages[conversationId] ?? const []);
+    return _states.map((s) => s.messages[conversationId] ?? const []);
   }
 
   @override
   Stream<Conversation?> getConversationById(String conversationId) {
-    return _store.stream.map((s) {
+    return _states.map((s) {
       try {
         return s.conversations.firstWhere((c) => c.id == conversationId);
       } catch (_) {

@@ -31,7 +31,7 @@ final startupRepositoryProvider = Provider<StartupRepository>((ref) => StartupRe
 final userRepositoryProvider = Provider<UserRepository>((ref) => UserRepositoryImpl());
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) => AnalyticsRepositoryImpl());
 final messageRepositoryProvider = Provider<MessageRepository>((ref) {
-  final store = ref.watch(localMessageStoreProvider.notifier);
+  final store = ref.watch(localMessageStoreProvider);
   return MessageRepositoryImpl(store);
 });
 final messagingServiceProvider = Provider<MessagingService>((ref) => MessagingService());
