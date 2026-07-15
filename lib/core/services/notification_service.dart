@@ -1,89 +1,191 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Service to automatically create notifications in Firestore
-/// when key events happen in the app.
+/// Automatically creates Firestore notifications for every key app event.
+/// Never throws — failures are swallowed so they never block core actions.
 class NotificationService {
   final FirebaseFirestore _firestore;
-  
+
   NotificationService({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  static const _collection = 'notifications';
+  static const _col = 'notifications';
 
-  /// Creates a notification for a user.
-  Future<void> createNotification({
+  Future<void> _create({
     required String userId,
     required String title,
-    required String description,
-    required String type, // 'application', 'message', 'startup_review', 'system'
+    required String body,
+    required String type,
     String? relatedId,
   }) async {
     try {
-      await _firestore.collection(_collection).add({
+      await _firestore.collection(_col).add({
         'userId': userId,
         'title': title,
-        'description': description,
+        'description': body,
         'type': type,
         'isRead': false,
         'relatedId': relatedId,
         'createdAt': FieldValue.serverTimestamp(),
       });
-    } catch (e) {
-      // Silently fail - notifications should never block core functionality
-      // ignore: avoid_print
-      print('Failed to create notification: $e');
-    }
+    } catch (_) {}
   }
 
-  /// Notify startup founder when a student applies.
+  // ── Student-facing ────────────────────────────────────────────────────────
+
+  /// Student submitted an application → notify the founder.
   Future<void> notifyNewApplication({
     required String startupId,
     required String studentName,
     required String opportunityTitle,
     String? applicationId,
+  }) =>
+      _create(
+        userId: startupId,
+        title: 'New Application Received',
+        body: '$studentName applied for "$opportunityTitle"',
+        type: 'application',
+        relatedId: applicationId,
+      );
+
+  /// Founder moved application to Under Review → notify student.
+  Future<void> notifyUnderReview({
+    required String studentId,
+    required String opportunityTitle,
+    String? applicationId,
+  }) =>
+      _create(
+        userId: studentId,
+        title: 'Application Under Review',
+        body: 'Your application for "$opportunityTitle" is now being reviewed.',
+        type: 'application',
+        relatedId: applicationId,
+      );
+
+  /// Founder scheduled an interview → notify student.
+  Future<void> notifyInterviewScheduled({
+    required String studentId,
+    required String opportunityTitle,
+    required String startupName,
+    String? interviewDate,
+    String? applicationId,
+  }) =>
+      _create(
+        userId: studentId,
+        title: 'Interview Scheduled 🎉',
+        body: interviewDate != null
+            ? '$startupName scheduled your interview for "$opportunityTitle" on $interviewDate.'
+            : '$startupName scheduled an interview for "$opportunityTitle".',
+        type: 'application',
+        relatedId: applicationId,
+      );
+
+  /// Founder updated interview details → notify student.
+  Future<void> notifyInterviewUpdated({
+    required String studentId,
+    required String opportunityTitle,
+    String? applicationId,
+  }) =>
+      _create(
+        userId: studentId,
+        title: 'Interview Details Updated',
+        body: 'The interview details for "$opportunityTitle" have been updated.',
+        type: 'application',
+        relatedId: applicationId,
+      );
+
+  /// Application accepted → notify student.
+  Future<void> notifyAccepted({
+    required String studentId,
+    required String opportunityTitle,
+    required String startupName,
+    String? applicationId,
+  }) =>
+      _create(
+        userId: studentId,
+        title: 'Application Accepted 🎉',
+        body: 'Congratulations! $startupName accepted your application for "$opportunityTitle".',
+        type: 'application',
+        relatedId: applicationId,
+      );
+
+  /// Application rejected → notify student.
+  Future<void> notifyRejected({
+    required String studentId,
+    required String opportunityTitle,
+    String? applicationId,
+  }) =>
+      _create(
+        userId: studentId,
+        title: 'Application Update',
+        body: 'Your application for "$opportunityTitle" was not selected this time.',
+        type: 'application',
+        relatedId: applicationId,
+      );
+
+  /// Student withdrew → notify founder.
+  Future<void> notifyWithdrawn({
+    required String startupId,
+    required String studentName,
+    required String opportunityTitle,
+    String? applicationId,
+  }) =>
+      _create(
+        userId: startupId,
+        title: 'Application Withdrawn',
+        body: '$studentName withdrew their application for "$opportunityTitle".',
+        type: 'application',
+        relatedId: applicationId,
+      );
+
+  // ── Opportunity ───────────────────────────────────────────────────────────
+
+  /// Opportunity closed → notify all applicants.
+  Future<void> notifyOpportunityClosed({
+    required List<String> studentIds,
+    required String opportunityTitle,
+    String? opportunityId,
   }) async {
-    await createNotification(
-      userId: startupId,
-      title: 'New Application Received',
-      description: '$studentName applied for $opportunityTitle',
-      type: 'application',
-      relatedId: applicationId,
-    );
+    for (final id in studentIds) {
+      await _create(
+        userId: id,
+        title: 'Opportunity Closed',
+        body: 'The opportunity "$opportunityTitle" has been closed.',
+        type: 'system',
+        relatedId: opportunityId,
+      );
+    }
   }
 
-  /// Notify a user when they receive a new message.
+  // ── Messaging ─────────────────────────────────────────────────────────────
+
   Future<void> notifyNewMessage({
     required String recipientId,
     required String senderName,
     String? conversationId,
-  }) async {
-    await createNotification(
-      userId: recipientId,
-      title: 'New Message',
-      description: 'You have a new message from $senderName',
-      type: 'message',
-      relatedId: conversationId,
-    );
-  }
+  }) =>
+      _create(
+        userId: recipientId,
+        title: 'New Message',
+        body: 'You have a new message from $senderName.',
+        type: 'message',
+        relatedId: conversationId,
+      );
 
-  /// Notify startup founder about verification status change.
+  // ── Startup verification ──────────────────────────────────────────────────
+
   Future<void> notifyStartupStatus({
     required String founderId,
     required String startupName,
-    required String status, // 'approved' or 'rejected'
-  }) async {
-    final title = status == 'approved' 
-        ? 'Startup Approved! 🎉'
-        : 'Startup Application Rejected';
-    final description = status == 'approved'
-        ? 'Your startup "$startupName" has been approved. You can now post opportunities!'
-        : 'Your startup "$startupName" application was not approved. Please contact support.';
-    
-    await createNotification(
-      userId: founderId,
-      title: title,
-      description: description,
-      type: 'startup_review',
-    );
-  }
+    required String status,
+  }) =>
+      _create(
+        userId: founderId,
+        title: status == 'approved'
+            ? 'Startup Approved! 🎉'
+            : 'Startup Application Rejected',
+        body: status == 'approved'
+            ? 'Your startup "$startupName" has been approved. You can now post opportunities!'
+            : 'Your startup "$startupName" application was not approved. Please contact support.',
+        type: 'system',
+      );
 }

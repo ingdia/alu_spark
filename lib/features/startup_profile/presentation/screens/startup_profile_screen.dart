@@ -57,6 +57,7 @@ class StartupProfileScreen extends ConsumerWidget {
           actions: [
             IconButton(
               icon: const Icon(Icons.share_outlined, color: AppColors.white),
+              // TODO: Share startup profile — no share screen exists. Wire when share functionality is implemented.
               onPressed: () {},
             ),
           ],

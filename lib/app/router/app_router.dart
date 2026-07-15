@@ -20,6 +20,9 @@ import 'package:alu_spark/features/startup_profile/presentation/screens/startup_
 import 'package:alu_spark/features/applications/presentation/screens/apply_opportunity_screen.dart';
 import 'package:alu_spark/features/applications/presentation/screens/application_tracking_screen.dart';
 import 'package:alu_spark/features/applications/presentation/screens/applications_received_screen.dart';
+import 'package:alu_spark/features/applications/domain/entities/application.dart';
+import 'package:alu_spark/features/recruitment/presentation/screens/recruitment_management_screen.dart';
+import 'package:alu_spark/features/recruitment/presentation/screens/applicant_profile_screen.dart';
 import 'package:alu_spark/features/admin_verification/presentation/screens/admin_verification_screen.dart';
 import 'package:alu_spark/features/admin_user_management/presentation/screens/admin_user_management_screen.dart';
 import 'package:alu_spark/features/admin_analytics/presentation/screens/admin_analytics_screen.dart';
@@ -65,6 +68,8 @@ class RouteNames {
   static const String startupOnboarding = '/startup-onboarding';
   static const String studentOnboarding = '/student-onboarding';
   static const String profileSetup = '/profile-setup';
+  static const String recruitmentManagement = '/recruitment-management';
+  static const String applicantProfile = '/applicant-profile';
 }
 
 class AppRouter {
@@ -101,6 +106,10 @@ class AppRouter {
         
       case RouteNames.applicationTracking: return MaterialPageRoute(builder: (_) => const ApplicationTrackingScreen());
       case RouteNames.applicationsReceived: return MaterialPageRoute(builder: (_) => const ApplicationsReceivedScreen());
+      case RouteNames.recruitmentManagement: return MaterialPageRoute(builder: (_) => const RecruitmentManagementScreen());
+      case RouteNames.applicantProfile:
+        final application = settings.arguments as Application;
+        return MaterialPageRoute(builder: (_) => ApplicantProfileScreen(application: application));
       case RouteNames.adminVerification: return MaterialPageRoute(builder: (_) => const AdminVerificationScreen());
       case RouteNames.adminUserManagement: return MaterialPageRoute(builder: (_) => const AdminUserManagementScreen());
       case RouteNames.adminAnalytics: return MaterialPageRoute(builder: (_) => const AdminAnalyticsScreen());

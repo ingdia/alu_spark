@@ -1,9 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/providers/firebase_providers.dart';
+import 'package:alu_spark/core/providers/repository_providers.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/core/widgets/loading_widget.dart';
 import 'package:alu_spark/core/widgets/empty_state_widget.dart';
@@ -35,7 +35,7 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
           onRetry: () =>
               ref.invalidate(applicationsByStartupProvider(currentUser.id)),
         ),
-        data: (applications) => _buildContent(context, applications),
+        data: (applications) => _buildContent(context, ref, applications),
       ),
     );
   }
@@ -65,7 +65,7 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, List<Application> applications) {
+  Widget _buildContent(BuildContext context, WidgetRef ref, List<Application> applications) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -86,7 +86,7 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
                 )
               : Column(
                   children: applications
-                      .map((app) => _buildApplicationCard(context, app))
+                      .map((app) => _buildApplicationCard(context, ref, app))
                       .toList(),
                 ),
           const SizedBox(height: 20),
@@ -99,8 +99,8 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
     final total = applications.length;
     final pending = applications
         .where((a) =>
-            a.status == ApplicationStatus.pending ||
-            a.status == ApplicationStatus.reviewing)
+            a.status == ApplicationStatus.applied ||
+            a.status == ApplicationStatus.underReview)
         .length;
     final shortlisted =
         applications.where((a) => a.status == ApplicationStatus.interview).length;
@@ -128,7 +128,7 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildApplicationCard(BuildContext context, Application app) {
+  Widget _buildApplicationCard(BuildContext context, WidgetRef ref, Application app) {
     final statusColor = _statusColor(app.status);
     final formattedDate =
         '${app.createdAt.day}/${app.createdAt.month}/${app.createdAt.year}';
@@ -210,7 +210,7 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () =>
-                        _updateStatus(context, app.id, ApplicationStatus.rejected),
+                        _updateStatus(context, ref, app.id, ApplicationStatus.rejected),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppColors.borderGlass),
                       shape: RoundedRectangleBorder(
@@ -226,7 +226,7 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () =>
-                        _updateStatus(context, app.id, ApplicationStatus.interview),
+                        _updateStatus(context, ref, app.id, ApplicationStatus.interview),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.darkRed,
                       shape: RoundedRectangleBorder(
@@ -248,12 +248,11 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
   }
 
   Future<void> _updateStatus(
-      BuildContext context, String applicationId, ApplicationStatus status) async {
+      BuildContext context, WidgetRef ref, String applicationId, ApplicationStatus status) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('applications')
-          .doc(applicationId)
-          .update({'status': status.name});
+      await ref
+          .read(applicationRepositoryProvider)
+          .updateApplicationStatus(applicationId, status);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -279,14 +278,15 @@ class ApplicationsReceivedScreen extends ConsumerWidget {
 
   Color _statusColor(ApplicationStatus status) {
     switch (status) {
-      case ApplicationStatus.pending:
-      case ApplicationStatus.reviewing:
+      case ApplicationStatus.applied:
+      case ApplicationStatus.underReview:
         return AppColors.textSecondary;
       case ApplicationStatus.interview:
         return AppColors.darkRedLight;
       case ApplicationStatus.accepted:
         return AppColors.darkRed;
       case ApplicationStatus.rejected:
+      case ApplicationStatus.withdrawn:
         return AppColors.textSecondary.withValues(alpha: 0.5);
     }
   }

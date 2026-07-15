@@ -67,6 +67,7 @@ class StartupModel {
 
   Map<String, dynamic> toFirestore() {
     return {
+      'startupName': name,
       'name': name,
       'tagline': tagline,
       'industry': industry,
@@ -76,7 +77,10 @@ class StartupModel {
       'teamMembers': teamMembers,
       'openRolesCount': openRolesCount,
       'isVerified': isVerified,
-      'createdAt': FieldValue.serverTimestamp(),
+      'website': website,
+      'linkedin': linkedin,
+      'stage': stage,
+      'teamSize': teamSize,
     };
   }
 

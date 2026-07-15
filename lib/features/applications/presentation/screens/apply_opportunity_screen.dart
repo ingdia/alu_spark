@@ -16,6 +16,18 @@ import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dar
 import 'package:alu_spark/features/applications/domain/entities/application.dart';
 import 'package:alu_spark/shared/enums/application_status.dart';
 
+// ---------------------------------------------------------------------------
+// Provider: checks whether the current user already applied to this opportunity
+// ---------------------------------------------------------------------------
+final _hasAppliedProvider =
+    FutureProvider.autoDispose.family<bool, String>((ref, opportunityId) async {
+  final uid = fb.FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return false;
+  return ref
+      .read(applicationRepositoryProvider)
+      .hasApplied(uid, opportunityId);
+});
+
 class ApplyOpportunityScreen extends ConsumerStatefulWidget {
   final Opportunity opportunity;
   const ApplyOpportunityScreen({super.key, required this.opportunity});
@@ -65,6 +77,22 @@ class _ApplyOpportunityScreenState extends ConsumerState<ApplyOpportunityScreen>
       final currentUser = fb.FirebaseAuth.instance.currentUser;
       if (currentUser == null) throw Exception('Not logged in');
 
+      // Second-line guard: re-check on the server before writing.
+      final alreadyApplied = await ref
+          .read(applicationRepositoryProvider)
+          .hasApplied(currentUser.uid, widget.opportunity.id);
+      if (alreadyApplied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You have already applied to this opportunity.'),
+              backgroundColor: AppColors.darkRed,
+            ),
+          );
+        }
+        return;
+      }
+
       String cvUrl = '';
       if (_pickedCv != null) {
         Uint8List? bytes = _pickedCv!.bytes;
@@ -85,6 +113,7 @@ class _ApplyOpportunityScreenState extends ConsumerState<ApplyOpportunityScreen>
         }
       }
 
+      final now = DateTime.now();
       final application = Application(
         id: '',
         opportunityId: widget.opportunity.id,
@@ -96,8 +125,9 @@ class _ApplyOpportunityScreenState extends ConsumerState<ApplyOpportunityScreen>
         studentEmail: currentUser.email ?? '',
         motivation: _motivationController.text.trim(),
         cvUrl: cvUrl,
-        status: ApplicationStatus.pending,
-        createdAt: DateTime.now(),
+        status: ApplicationStatus.applied,
+        createdAt: now,
+        updatedAt: now,
       );
 
       await ref.read(applicationRepositoryProvider).submitApplication(application);
@@ -182,6 +212,10 @@ class _ApplyOpportunityScreenState extends ConsumerState<ApplyOpportunityScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Check for existing application before rendering the form.
+    final hasAppliedAsync =
+        ref.watch(_hasAppliedProvider(widget.opportunity.id));
+
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
       appBar: AppBar(
@@ -194,31 +228,103 @@ class _ApplyOpportunityScreenState extends ConsumerState<ApplyOpportunityScreen>
             borderRadius: 12,
             padding: EdgeInsets.zero,
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 18),
+              icon: const Icon(Icons.arrow_back_ios_new,
+                  color: AppColors.white, size: 18),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),
         ),
-        title: Text('Apply', style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
+        title: Text('Apply',
+            style:
+                AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          _buildStepIndicator(),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _buildStep1(),
-                _buildStep2(),
-                _buildStep3(),
-              ],
-            ),
-          ),
-          _buildBottomNav(),
-        ],
+      body: hasAppliedAsync.when(
+        loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.darkRed)),
+        error: (_, __) => _buildForm(),
+        data: (alreadyApplied) {
+          if (alreadyApplied) return _buildAlreadyApplied();
+          return _buildForm();
+        },
       ),
+    );
+  }
+
+  // ── Already-applied banner ──────────────────────────────────────────────
+  Widget _buildAlreadyApplied() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.darkRed.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle_outline,
+                  color: AppColors.darkRed, size: 56),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Already Applied',
+              style: AppTextStyles.headingMedium
+                  .copyWith(color: AppColors.white, fontSize: 22),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'You have already submitted an application for ${widget.opportunity.title}. '  
+              'Track its status in My Applications.',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textSecondary, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context)
+                    .pushReplacementNamed(RouteNames.applicationTracking),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.darkRed,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: Text('View My Applications',
+                    style: AppTextStyles.bodyLarge
+                        .copyWith(color: AppColors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Main form (unchanged layout) ────────────────────────────────────────
+  Widget _buildForm() {
+    return Column(
+      children: [
+        _buildStepIndicator(),
+        Expanded(
+          child: PageView(
+            controller: _pageController,
+            physics: const NeverScrollableScrollPhysics(),
+            children: [
+              _buildStep1(),
+              _buildStep2(),
+              _buildStep3(),
+            ],
+          ),
+        ),
+        _buildBottomNav(),
+      ],
     );
   }
 

@@ -10,6 +10,7 @@ import 'package:alu_spark/features/admin_user_management/domain/repositories/use
 import 'package:alu_spark/features/admin_analytics/data/repositories/analytics_repository_impl.dart';
 import 'package:alu_spark/features/admin_analytics/domain/repositories/analytics_repository.dart';
 import 'package:alu_spark/features/messaging/data/repositories/message_repository_impl.dart';
+import 'package:alu_spark/features/messaging/data/repositories/local_message_store.dart';
 import 'package:alu_spark/features/messaging/domain/repositories/message_repository.dart';
 import 'package:alu_spark/features/notifications/data/repositories/notification_repository_impl.dart';
 import 'package:alu_spark/features/notifications/domain/repositories/notification_repository.dart';
@@ -22,11 +23,17 @@ import 'package:alu_spark/core/services/messaging_service.dart';
 
 final opportunityRepositoryProvider = Provider<OpportunityRepository>((ref) => OpportunityRepositoryImpl());
 final notificationServiceProvider = Provider<NotificationService>((ref) => NotificationService());
-final applicationRepositoryProvider = Provider<ApplicationRepository>((ref) => ApplicationRepositoryImpl());
+final applicationRepositoryProvider = Provider<ApplicationRepository>((ref) {
+  final messaging = ref.watch(messageRepositoryProvider);
+  return ApplicationRepositoryImpl(messaging: messaging);
+});
 final startupRepositoryProvider = Provider<StartupRepository>((ref) => StartupRepositoryImpl());
 final userRepositoryProvider = Provider<UserRepository>((ref) => UserRepositoryImpl());
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) => AnalyticsRepositoryImpl());
-final messageRepositoryProvider = Provider<MessageRepository>((ref) => MessageRepositoryImpl());
+final messageRepositoryProvider = Provider<MessageRepository>((ref) {
+  final store = ref.watch(localMessageStoreProvider);
+  return MessageRepositoryImpl(store);
+});
 final messagingServiceProvider = Provider<MessagingService>((ref) => MessagingService());
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) => NotificationRepositoryImpl());
 

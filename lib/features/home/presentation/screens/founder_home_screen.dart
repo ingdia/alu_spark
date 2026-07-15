@@ -34,7 +34,7 @@ class FounderHomeScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(),
+              _buildHeader(context),
               const SizedBox(height: 24),
               applicationsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator(color: AppColors.darkRed)),
@@ -47,11 +47,11 @@ class FounderHomeScreen extends ConsumerWidget {
                     children: [
                       _buildQuickStats(applications, opportunities.length),
                       const SizedBox(height: 32),
-                      _buildSectionHeader('Quick Actions'),
+                      _buildSectionHeader(context, 'Quick Actions', null),
                       const SizedBox(height: 16),
                       _buildQuickActions(context),
                       const SizedBox(height: 32),
-                      _buildSectionHeader('Recent Applications'),
+                      _buildSectionHeader(context, 'Recent Applications', RouteNames.applicationsReceived),
                       const SizedBox(height: 16),
                       _buildRecentApplications(applications),
                     ],
@@ -66,26 +66,29 @@ class FounderHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         const AluLogo(size: 40),
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppColors.glassWhite,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.borderGlass),
+        GestureDetector(
+          onTap: () => Navigator.of(context).pushNamed(RouteNames.notifications),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.glassWhite,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.borderGlass),
+            ),
+            child: const Icon(Icons.notifications_outlined, color: AppColors.white, size: 24),
           ),
-          child: const Icon(Icons.notifications_outlined, color: AppColors.white, size: 24),
         ),
       ],
     );
   }
 
   Widget _buildQuickStats(List<Application> applications, int postedCount) {
-    final newCount = applications.where((a) => a.status == ApplicationStatus.pending).length;
+    final newCount = applications.where((a) => a.status == ApplicationStatus.applied).length;
     return Row(
       children: [
         _StatCard(title: 'Received', count: '${applications.length}', icon: Icons.people_outline),
@@ -95,15 +98,29 @@ class FounderHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(BuildContext context, String title, String? route) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(title, style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
-        TextButton(
-          onPressed: () {},
-          child: Text('See All', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed)),
-        ),
+        if (route != null)
+          TextButton(
+            onPressed: () => Navigator.of(context).pushNamed(route),
+            child: Text('See All', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed)),
+          )
+        else
+          TextButton(
+            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('All quick actions are already visible below.'),
+                backgroundColor: AppColors.darkBlueLight,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                margin: const EdgeInsets.all(16),
+              ),
+            ),
+            child: Text('See All', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+          ),
       ],
     );
   }

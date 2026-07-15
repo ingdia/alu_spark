@@ -15,3 +15,13 @@ final applicationsByStartupProvider =
       .watch(applicationRepositoryProvider)
       .getApplicationsByStartup(startupId);
 });
+
+/// Watches the single application a student has for a specific opportunity.
+/// Emits null when no application exists.
+final applicationForOpportunityProvider = StreamProvider.autoDispose
+    .family<Application?, ({String studentId, String opportunityId})>(
+        (ref, args) {
+  return ref
+      .watch(applicationRepositoryProvider)
+      .getApplicationForOpportunity(args.studentId, args.opportunityId);
+});
