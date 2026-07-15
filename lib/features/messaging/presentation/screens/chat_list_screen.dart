@@ -1,215 +1,225 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:alu_spark/app/router/app_router.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
-import 'package:alu_spark/core/widgets/loading_widget.dart';
+import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/core/widgets/empty_state_widget.dart';
 import 'package:alu_spark/core/widgets/error_state_widget.dart';
-import 'package:alu_spark/core/providers/firebase_providers.dart';
-import 'package:alu_spark/features/messaging/presentation/providers/message_provider.dart';
+import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
+import 'package:alu_spark/core/widgets/loading_widget.dart';
 import 'package:alu_spark/features/messaging/domain/entities/conversation.dart';
-import 'package:alu_spark/app/router/app_router.dart';
+import 'package:alu_spark/features/messaging/presentation/providers/message_provider.dart';
 
 class ChatListScreen extends ConsumerWidget {
   const ChatListScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
+    final user = ref.watch(authStateProvider).value;
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
       appBar: AppBar(
         backgroundColor: AppColors.darkBlueLight,
         elevation: 0,
-        title: Text(
-          'Chats',
-          style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
+        leading: Padding(
+          padding: const EdgeInsets.all(12),
+          child: GlassmorphicContainer(
+            blur: 10,
+            borderRadius: 12,
+            padding: EdgeInsets.zero,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new,
+                  color: AppColors.white, size: 18),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: AppColors.white),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: AppColors.white),
-            onPressed: () {},
-          ),
-        ],
+        title: Text('Messages',
+            style: AppTextStyles.headingMedium
+                .copyWith(color: AppColors.white)),
+        centerTitle: true,
       ),
-      body: authState.when(
-        loading: () => const LoadingWidget(),
-        error: (error, _) => ErrorStateWidget(message: error.toString()),
-        data: (user) {
-          if (user == null) {
-            return const EmptyStateWidget(
-              icon: Icons.lock,
+      body: user == null
+          ? const EmptyStateWidget(
+              icon: Icons.lock_outline,
               title: 'Not Logged In',
               description: 'Please log in to view your messages.',
-            );
-          }
-          
-          final conversationsAsync = ref.watch(conversationsProvider(user.id));
-          
-          return conversationsAsync.when(
-            loading: () => const LoadingWidget(message: 'Loading conversations...'),
-            error: (error, _) => ErrorStateWidget(
-              message: error.toString(),
-              onRetry: () => ref.invalidate(conversationsProvider(user.id)),
-            ),
-            data: (conversations) => _buildContent(context, conversations, ref),
-          );
-        },
-      ),
+            )
+          : ref.watch(conversationsProvider(user.id)).when(
+                loading: () =>
+                    const LoadingWidget(message: 'Loading messages...'),
+                error: (e, _) =>
+                    ErrorStateWidget(message: e.toString()),
+                data: (convs) => _buildList(context, ref, convs, user.id),
+              ),
     );
   }
 
-  Widget _buildContent(BuildContext context, List<Conversation> conversations, WidgetRef ref) {
-    if (conversations.isEmpty) {
+  Widget _buildList(BuildContext context, WidgetRef ref,
+      List<Conversation> convs, String myId) {
+    if (convs.isEmpty) {
       return const EmptyStateWidget(
         icon: Icons.chat_bubble_outline,
-        title: 'No Conversations',
-        description: 'Start a chat with a founder or student!',
+        title: 'No Conversations Yet',
+        description:
+            'Conversations open automatically when an interview is scheduled.',
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.only(top: 4),
-      itemCount: conversations.length,
-      itemBuilder: (context, index) => _buildConversationCard(context, conversations[index], ref),
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: convs.length,
+      separatorBuilder: (_, __) =>
+          const Divider(color: AppColors.borderGlass, height: 0.5, indent: 80),
+      itemBuilder: (_, i) =>
+          _ConvTile(conv: convs[i], myId: myId),
     );
   }
+}
 
-  String _formatTime(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-    if (diff.inMinutes < 1) return 'Now';
-    if (diff.inHours < 1) return '${diff.inMinutes}m';
-    if (diff.inDays < 1) {
-      return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    }
-    if (diff.inDays < 7) {
-      final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      return days[date.weekday - 1];
-    }
-    return '${date.day}/${date.month}/${date.year}';
-  }
+class _ConvTile extends StatelessWidget {
+  final Conversation conv;
+  final String myId;
 
-  Widget _buildConversationCard(BuildContext context, Conversation conv, WidgetRef ref) {
-    final authState = ref.read(authStateProvider);
-    final currentUserId = authState.value?.id ?? '';
-    final String contactName = conv.participantNames.values.firstWhere(
-      (name) => name != 'Me',
-      orElse: () => conv.participantNames.values.isNotEmpty ? conv.participantNames.values.first : 'Unknown',
-    );
-    final bool hasUnread = conv.getUnreadCount(currentUserId) > 0;
-    final int unreadCount = conv.getUnreadCount(currentUserId);
-    
+  const _ConvTile({required this.conv, required this.myId});
+
+  @override
+  Widget build(BuildContext context) {
+    final otherId = conv.otherParticipantId(myId);
+    final otherName = conv.getParticipantName(otherId);
+    final unread = conv.getUnreadCount(myId);
+    final hasUnread = unread > 0;
+    final lastSeen = conv.lastSeen[otherId];
+    final isTyping = conv.typingUsers.contains(otherId);
+
     return GestureDetector(
-      onTap: () {
-        Navigator.of(context).pushNamed(
-          RouteNames.chatDetail,
-          arguments: {'contactId': conv.participantIds.firstWhere((id) => id != currentUserId, orElse: () => conv.participantIds.first), 'contactName': contactName},
-        );
-      },
+      onTap: () => Navigator.of(context).pushNamed(
+        RouteNames.chatDetail,
+        arguments: {
+          'conversationId': conv.id,
+          'contactId': otherId,
+          'contactName': otherName,
+        },
+      ),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: const BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: AppColors.borderGlass, width: 0.3),
-          ),
-        ),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            // Avatar with online indicator
+            // Avatar
             Stack(
               children: [
                 CircleAvatar(
                   radius: 26,
-                  backgroundColor: AppColors.darkRed.withValues(alpha: 0.2),
+                  backgroundColor:
+                      AppColors.darkRed.withValues(alpha: 0.2),
                   child: Text(
-                    contactName.isNotEmpty ? contactName[0].toUpperCase() : '?',
-                    style: AppTextStyles.headingMedium.copyWith(color: AppColors.darkRed),
+                    otherName.isNotEmpty
+                        ? otherName[0].toUpperCase()
+                        : '?',
+                    style: AppTextStyles.headingMedium
+                        .copyWith(color: AppColors.darkRed, fontSize: 18),
                   ),
                 ),
-                // Online indicator
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.darkBlue, width: 2),
+                if (_isOnline(lastSeen))
+                  Positioned(
+                    bottom: 1,
+                    right: 1,
+                    child: Container(
+                      width: 11,
+                      height: 11,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF34D399),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: AppColors.darkBlue, width: 2),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
-            const SizedBox(width: 16),
-            // Message content
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                  Expanded(
-                    child: Text(
-                      contactName,
-                      style: AppTextStyles.bodyLarge.copyWith(
-                        color: AppColors.white,
-                        fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
-                        fontSize: 16,
+                      Expanded(
+                        child: Text(otherName,
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              color: AppColors.white,
+                              fontWeight: hasUnread
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis),
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
                       Text(
-                        _formatTime(conv.lastMessageTime),
+                        _fmtTime(conv.lastMessageTime),
                         style: AppTextStyles.bodyMedium.copyWith(
-                          color: hasUnread ? AppColors.darkRed : AppColors.textSecondary,
-                          fontSize: 12,
+                          color: hasUnread
+                              ? AppColors.darkRed
+                              : AppColors.textSecondary,
+                          fontSize: 11,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
+                  if (conv.opportunityTitle != null)
+                    Text(conv.opportunityTitle!,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.darkRedLight,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          conv.lastMessage,
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: hasUnread ? AppColors.white : AppColors.textSecondary,
-                            fontSize: 14,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: isTyping
+                            ? Text('typing…',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                    color: const Color(0xFF34D399),
+                                    fontSize: 13,
+                                    fontStyle: FontStyle.italic))
+                            : Text(conv.lastMessage,
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: hasUnread
+                                      ? AppColors.white
+                                      : AppColors.textSecondary,
+                                  fontSize: 13,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
                       ),
-                      if (hasUnread) ...[
-                        const SizedBox(width: 8),
+                      if (hasUnread)
                         Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
+                          margin: const EdgeInsets.only(left: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
                             color: AppColors.darkRed,
-                            shape: BoxShape.circle,
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Text(
-                            '$unreadCount',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          child: Text('$unread',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700)),
                         ),
-                      ],
                     ],
                   ),
+                  if (!isTyping && lastSeen != null && !_isOnline(lastSeen))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text('Last seen ${_relativeTime(lastSeen)}',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                              fontSize: 10)),
+                    ),
                 ],
               ),
             ),
@@ -217,5 +227,31 @@ class ChatListScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  bool _isOnline(DateTime? lastSeen) {
+    if (lastSeen == null) return false;
+    return DateTime.now().difference(lastSeen).inMinutes < 5;
+  }
+
+  String _fmtTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m';
+    if (diff.inDays < 1) {
+      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    }
+    if (diff.inDays < 7) {
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return days[dt.weekday - 1];
+    }
+    return '${dt.day}/${dt.month}';
+  }
+
+  String _relativeTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
   }
 }

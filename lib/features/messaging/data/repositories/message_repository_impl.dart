@@ -1,132 +1,153 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:alu_spark/features/messaging/domain/entities/message.dart';
+import 'dart:async';
+import 'package:alu_spark/features/messaging/data/repositories/local_message_store.dart';
 import 'package:alu_spark/features/messaging/domain/entities/conversation.dart';
+import 'package:alu_spark/features/messaging/domain/entities/message.dart';
 import 'package:alu_spark/features/messaging/domain/repositories/message_repository.dart';
 
 class MessageRepositoryImpl implements MessageRepository {
-  final FirebaseFirestore _firestore;
-  final String _conversationsPath = 'conversations';
+  final LocalMessageStore _store;
 
-  MessageRepositoryImpl({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  MessageRepositoryImpl(this._store);
+
+  // ── Streams derived from StateNotifier ────────────────────────────────────
 
   @override
   Stream<List<Conversation>> getConversations(String userId) {
-    return _firestore
-        .collection(_conversationsPath)
-        .where('participantIds', arrayContains: userId)
-        .snapshots()
-        .map((snapshot) {
-      final list = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return Conversation(
-          id: doc.id,
-          participantIds: List<String>.from(data['participantIds'] ?? []),
-          participantNames: Map<String, String>.from(data['participantNames'] ?? {}),
-          participantRoles: Map<String, String>.from(data['participantRoles'] ?? {}),
-          lastMessage: data['lastMessage'] ?? '',
-          lastMessageTime: (data['lastMessageTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
-          unreadCounts: Map<String, int>.from(data['unreadCounts'] ?? {}),
-          opportunityId: data['opportunityId'],
-        );
-      }).toList();
-      list.sort((a, b) => b.lastMessageTime.compareTo(a.lastMessageTime));
-      return list;
-    });
+    return _store.stream.map((s) => s.conversations
+        .where((c) => c.participantIds.contains(userId))
+        .toList()
+      ..sort((a, b) => b.lastMessageTime.compareTo(a.lastMessageTime)));
   }
 
   @override
   Stream<List<Message>> getMessages(String conversationId) {
-    return _firestore
-        .collection(_conversationsPath)
-        .doc(conversationId)
-        .collection('messages')
-        .orderBy('createdAt', descending: false)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return Message(
-          id: doc.id,
-          conversationId: conversationId,
-          senderId: data['senderId'] ?? '',
-          senderName: data['senderName'] ?? '',
-          text: data['text'] ?? '',
-          createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-          isRead: data['isRead'] ?? false,
-          readBy: List<String>.from(data['readBy'] ?? []),
-        );
-      }).toList();
-    });
+    return _store.stream
+        .map((s) => s.messages[conversationId] ?? const []);
   }
 
   @override
+  Stream<Conversation?> getConversationById(String conversationId) {
+    return _store.stream.map((s) {
+      try {
+        return s.conversations.firstWhere((c) => c.id == conversationId);
+      } catch (_) {
+        return null;
+      }
+    });
+  }
+
+  // ── Writes ────────────────────────────────────────────────────────────────
+
+  @override
   Future<void> sendMessage(Message message) async {
-    final convRef = _firestore.collection(_conversationsPath).doc(message.conversationId);
-    final convDoc = await convRef.get();
-
-    if (!convDoc.exists) {
-      final parts = message.conversationId.split('_');
-      await convRef.set({
-        'participantIds': parts,
-        'participantNames': {parts[0]: 'Me', parts[1]: 'User'},
-        'participantRoles': {},
-        'lastMessage': message.text,
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'unreadCounts': {parts[0]: 0, parts[1]: 1},
-        'opportunityId': null,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    }
-
-    await convRef.collection('messages').doc().set({
-      'senderId': message.senderId,
-      'senderName': message.senderName,
-      'text': message.text,
-      'createdAt': FieldValue.serverTimestamp(),
-      'isRead': false,
-      'readBy': [],
-    });
-
-    await convRef.update({
-      'lastMessage': message.text,
-      'lastMessageTime': FieldValue.serverTimestamp(),
-    });
+    final id = 'msg_${DateTime.now().microsecondsSinceEpoch}';
+    final stamped = Message(
+      id: id,
+      conversationId: message.conversationId,
+      senderId: message.senderId,
+      senderName: message.senderName,
+      text: message.text,
+      createdAt: message.createdAt,
+      isRead: false,
+      readBy: [message.senderId],
+      type: message.type,
+      attachmentUrl: message.attachmentUrl,
+      attachmentName: message.attachmentName,
+    );
+    _store.addMessage(stamped);
   }
 
   @override
   Future<void> markAsRead(String conversationId, String userId) async {
-    await _firestore.collection(_conversationsPath).doc(conversationId).update({
-      'unreadCounts.$userId': 0,
-    });
+    _store.markRead(conversationId, userId);
   }
 
+  @override
+  Future<void> setTyping(
+      String conversationId, String userId, bool isTyping) async {
+    _store.setTyping(conversationId, userId, isTyping);
+  }
+
+  @override
+  Future<void> updateLastSeen(String conversationId, String userId) async {
+    _store.updateLastSeen(conversationId, userId);
+  }
+
+  @override
   Future<String> getOrCreateConversation({
     required String currentUserId,
+    required String currentUserName,
     required String otherUserId,
     required String otherUserName,
+    String? opportunityId,
+    String? opportunityTitle,
+    String? applicationId,
   }) async {
-    final ids = [currentUserId, otherUserId]..sort();
-    final conversationId = '${ids[0]}_${ids[1]}';
+    return _store.upsertConversation(
+      userId1: currentUserId,
+      name1: currentUserName,
+      userId2: otherUserId,
+      name2: otherUserName,
+      opportunityId: opportunityId,
+      opportunityTitle: opportunityTitle,
+      applicationId: applicationId,
+    );
+  }
 
-    final convRef = _firestore.collection(_conversationsPath).doc(conversationId);
-    final doc = await convRef.get();
+  @override
+  Future<String> openConversationForInterview({
+    required String founderId,
+    required String founderName,
+    required String studentId,
+    required String studentName,
+    required String opportunityTitle,
+    required String applicationId,
+    String? interviewDate,
+    String? meetingLink,
+  }) async {
+    final convId = _store.upsertConversation(
+      userId1: founderId,
+      name1: founderName,
+      userId2: studentId,
+      name2: studentName,
+      opportunityTitle: opportunityTitle,
+      applicationId: applicationId,
+      role1: 'founder',
+      role2: 'student',
+    );
 
-    if (!doc.exists) {
-      await convRef.set({
-        'participantIds': ids,
-        'participantNames': {ids[0]: 'User', ids[1]: otherUserName},
-        'participantRoles': {},
-        'lastMessage': '',
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'unreadCounts': {ids[0]: 0, ids[1]: 0},
-        'opportunityId': null,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    } else {
-      await convRef.update({'participantNames.${ids[1]}': otherUserName});
-    }
+    final now = DateTime.now();
 
-    return conversationId;
+    // System message
+    await sendMessage(Message(
+      id: '',
+      conversationId: convId,
+      senderId: 'system',
+      senderName: 'ALU Spark',
+      text:
+          'This conversation was created because $studentName has been invited to interview for "$opportunityTitle".',
+      createdAt: now,
+      type: MessageType.system,
+      readBy: const [],
+    ));
+
+    // Interview details message from founder
+    final details = StringBuffer('📅 Interview Scheduled\n\n');
+    if (interviewDate != null) details.write('Date: $interviewDate\n');
+    if (meetingLink != null) details.write('Link: $meetingLink\n');
+    details.write('\nPlease confirm your availability.');
+
+    await sendMessage(Message(
+      id: '',
+      conversationId: convId,
+      senderId: founderId,
+      senderName: founderName,
+      text: details.toString(),
+      createdAt: now.add(const Duration(seconds: 1)),
+      type: MessageType.interview,
+      readBy: const [],
+    ));
+
+    return convId;
   }
 }

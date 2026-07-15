@@ -3,17 +3,21 @@ import 'package:alu_spark/features/applications/domain/entities/application.dart
 import 'package:alu_spark/features/applications/domain/repositories/application_repository.dart';
 import 'package:alu_spark/shared/enums/application_status.dart';
 import 'package:alu_spark/core/services/notification_service.dart';
+import 'package:alu_spark/features/messaging/domain/repositories/message_repository.dart';
 
 class ApplicationRepositoryImpl implements ApplicationRepository {
   final FirebaseFirestore _firestore;
   final NotificationService _notifications;
+  final MessageRepository? _messaging;
   static const _collection = 'applications';
 
   ApplicationRepositoryImpl({
     FirebaseFirestore? firestore,
     NotificationService? notifications,
+    MessageRepository? messaging,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _notifications = notifications ?? NotificationService();
+        _notifications = notifications ?? NotificationService(),
+        _messaging = messaging;
 
   Application _fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
@@ -172,6 +176,15 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
           studentId: studentId,
           opportunityTitle: opportunityTitle,
           startupName: startupName,
+          applicationId: applicationId,
+        );
+        // Auto-open conversation between founder and student.
+        await _messaging?.openConversationForInterview(
+          founderId: data['startupId'] as String? ?? '',
+          founderName: startupName,
+          studentId: studentId,
+          studentName: data['studentName'] as String? ?? '',
+          opportunityTitle: opportunityTitle,
           applicationId: applicationId,
         );
       case ApplicationStatus.accepted:
