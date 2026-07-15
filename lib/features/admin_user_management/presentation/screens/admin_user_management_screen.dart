@@ -205,7 +205,7 @@ class _AdminUserManagementScreenState extends ConsumerState<AdminUserManagementS
                   ],
                 ),
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () => _showUserDialog(context, user),
                   child: Text(
                     'Manage',
                     style: AppTextStyles.bodyMedium.copyWith(
@@ -218,6 +218,133 @@ class _AdminUserManagementScreenState extends ConsumerState<AdminUserManagementS
             ),
           ],
         ),
+      ),
+    );
+  }
+  void _showUserDialog(BuildContext context, User user) {
+    final roleColor = user.role == UserRole.admin
+        ? AppColors.darkRed
+        : user.role == UserRole.founder
+            ? AppColors.darkRedLight
+            : AppColors.textSecondary;
+    final joinedDate =
+        '${user.createdAt.day}/${user.createdAt.month}/${user.createdAt.year}';
+
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: AppColors.darkBlueLight,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: roleColor.withValues(alpha: 0.2),
+                    backgroundImage: user.profileImageUrl != null
+                        ? NetworkImage(user.profileImageUrl!)
+                        : null,
+                    child: user.profileImageUrl == null
+                        ? Text(
+                            user.fullName.isNotEmpty ? user.fullName[0] : '?',
+                            style: AppTextStyles.headingMedium.copyWith(color: roleColor),
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(user.fullName,
+                            style: AppTextStyles.headingMedium.copyWith(
+                                color: AppColors.white, fontSize: 16)),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: roleColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            user.role.name.capitalize(),
+                            style: AppTextStyles.bodyMedium
+                                .copyWith(color: roleColor, fontSize: 11),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Divider(color: AppColors.borderGlass, height: 1),
+              const SizedBox(height: 16),
+              _dialogRow(Icons.email_outlined, 'Email', user.email),
+              if (user.phoneNumber != null && user.phoneNumber!.isNotEmpty)
+                _dialogRow(Icons.phone_outlined, 'Phone', user.phoneNumber!),
+              if (user.university != null && user.university!.isNotEmpty)
+                _dialogRow(Icons.school_outlined, 'University', user.university!),
+              if (user.major != null && user.major!.isNotEmpty)
+                _dialogRow(Icons.book_outlined, 'Major', user.major!),
+              _dialogRow(
+                user.isEmailVerified ? Icons.verified : Icons.email_outlined,
+                'Verification',
+                user.isEmailVerified ? 'Email verified' : 'Not verified',
+              ),
+              _dialogRow(Icons.calendar_today_outlined, 'Joined', joinedDate),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: TextButton.styleFrom(
+                    backgroundColor: AppColors.darkRed.withValues(alpha: 0.1),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: Text('Close',
+                      style: AppTextStyles.bodyLarge
+                          .copyWith(color: AppColors.darkRed)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _dialogRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: AppColors.darkRed, size: 16),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary, fontSize: 11)),
+                const SizedBox(height: 2),
+                Text(value,
+                    style: AppTextStyles.bodyMedium
+                        .copyWith(color: AppColors.white, fontSize: 13)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

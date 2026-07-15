@@ -161,38 +161,43 @@ class StudentHomeScreen extends ConsumerWidget {
   }
 
   Widget _buildSearchBar(BuildContext context) {
-    return GlassmorphicContainer(
-      blur: 12,
-      borderRadius: 14,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      child: Row(
-        children: [
-          const Icon(Icons.search_rounded, color: AppColors.textSecondary, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'Search roles, startups...',
-                hintStyle: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                  fontSize: 14,
+    return GestureDetector(
+      onTap: () => Navigator.of(context).pushNamed(RouteNames.search),
+      child: GlassmorphicContainer(
+        blur: 12,
+        borderRadius: 14,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        child: Row(
+          children: [
+            const Icon(Icons.search_rounded, color: AppColors.textSecondary, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: IgnorePointer(
+                child: TextField(
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Search roles, startups...',
+                    hintStyle: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
                 ),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
               ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              gradient: AppColors.redGradient,
-              borderRadius: BorderRadius.circular(10),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: AppColors.redGradient,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.tune_rounded, color: AppColors.white, size: 16),
             ),
-            child: const Icon(Icons.tune_rounded, color: AppColors.white, size: 16),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -236,7 +241,7 @@ class StudentHomeScreen extends ConsumerWidget {
           ),
         ),
         GestureDetector(
-          onTap: () {},
+          onTap: () => Navigator.of(context).pushNamed(RouteNames.discover),
           child: Text(
             'See all',
             style: AppTextStyles.bodyMedium.copyWith(
@@ -420,9 +425,7 @@ class _FeaturedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {},
-      child: Container(
+    return Container(
         width: width,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
@@ -525,7 +528,6 @@ class _FeaturedCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
     );
   }
 }

@@ -21,6 +21,9 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   // Cache the last known data to prevent flashing on rebuilds
   List<Opportunity>? _cachedFeatured;
   List<Opportunity>? _cachedRecent;
+  bool _showAllFeatured = false;
+  bool _showAllRecent = false;
+  static const int _recentInitialLimit = 5;
 
   @override
   Widget build(BuildContext context) {
@@ -46,14 +49,14 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               const SizedBox(height: 32),
               
               // Featured Section
-              _buildSectionHeader('Featured Opportunities'),
+              _buildSectionHeader('Featured Opportunities', _showAllFeatured, (_cachedFeatured?.length ?? 0) > 3, () => setState(() => _showAllFeatured = !_showAllFeatured)),
               const SizedBox(height: 16),
               _buildFeaturedList(context, featuredAsync),
               
               const SizedBox(height: 32),
               
               // Recent Section
-              _buildSectionHeader('Recent Opportunities'),
+              _buildSectionHeader('Recent Opportunities', _showAllRecent, (_cachedRecent?.length ?? 0) > _recentInitialLimit, () => setState(() => _showAllRecent = !_showAllRecent)),
               const SizedBox(height: 16),
               _buildRecentList(context, recentAsync, ref),
               
@@ -93,7 +96,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, bool showAll, bool hasMore, VoidCallback onToggle) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -101,10 +104,14 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           title,
           style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
         ),
-        TextButton(
-          onPressed: () {},
-          child: Text('See All', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed)),
-        ),
+        if (hasMore || showAll)
+          TextButton(
+            onPressed: onToggle,
+            child: Text(
+              showAll ? 'Show Less' : 'See All',
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed),
+            ),
+          ),
       ],
     );
   }
@@ -115,7 +122,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final displayData = asyncValue.whenOrNull(data: (data) => data) ?? _cachedFeatured;
     
     if (displayData != null) {
-      final featured = displayData.take(3).toList();
+      final featured = _showAllFeatured ? displayData : displayData.take(3).toList();
       if (featured.isEmpty) {
         return const SizedBox(
           height: 220,
@@ -175,8 +182,9 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           ),
         );
       }
+      final visible = _showAllRecent ? displayData : displayData.take(_recentInitialLimit).toList();
       return Column(
-        children: displayData.map((opportunity) {
+        children: visible.map((opportunity) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: OpportunityCard(

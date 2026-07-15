@@ -113,6 +113,7 @@ class _ApplyOpportunityScreenState extends ConsumerState<ApplyOpportunityScreen>
         }
       }
 
+      final now = DateTime.now();
       final application = Application(
         id: '',
         opportunityId: widget.opportunity.id,
@@ -124,8 +125,9 @@ class _ApplyOpportunityScreenState extends ConsumerState<ApplyOpportunityScreen>
         studentEmail: currentUser.email ?? '',
         motivation: _motivationController.text.trim(),
         cvUrl: cvUrl,
-        status: ApplicationStatus.pending,
-        createdAt: DateTime.now(),
+        status: ApplicationStatus.applied,
+        createdAt: now,
+        updatedAt: now,
       );
 
       await ref.read(applicationRepositoryProvider).submitApplication(application);

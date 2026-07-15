@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:alu_spark/app/router/app_router.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
@@ -123,6 +124,18 @@ class NotificationsScreen extends ConsumerWidget {
         onTap: () {
           if (isUnread) {
             ref.read(notificationRepositoryProvider).markAsRead(notif.id);
+          }
+          switch (notif.type) {
+            case 'application':
+              Navigator.of(context).pushNamed(RouteNames.applicationTracking);
+              break;
+            case 'message':
+              Navigator.of(context).pushNamed(RouteNames.chatList);
+              break;
+            case 'system':
+            default:
+              // System notifications: already on NotificationsScreen, no further navigation needed.
+              break;
           }
         },
         child: GlassmorphicContainer(
