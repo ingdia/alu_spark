@@ -6,6 +6,7 @@ import '../../../../core/providers/role_provider.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../core/providers/firebase_providers.dart';
 import '../../../../app/router/app_router.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 
 // Student screens
 import 'student_home_screen.dart';
@@ -350,7 +351,7 @@ class _AdminSettingsScreen extends ConsumerWidget {
               _tile(
                 icon: Icons.admin_panel_settings_outlined,
                 label: 'Admin Account',
-                sub: 'ngabirediane02@gmail.com',
+                sub: fb.FirebaseAuth.instance.currentUser?.email ?? 'admin',
               ),
               const SizedBox(height: 12),
               _tile(

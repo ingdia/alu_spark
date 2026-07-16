@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
+import 'package:alu_spark/core/providers/repository_providers.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/core/widgets/loading_widget.dart';
@@ -47,7 +48,7 @@ class AdminVerificationScreen extends ConsumerWidget {
                 title: 'All Caught Up',
                 description: 'No startups pending verification.',
               )
-            : _buildList(context, startups),
+            : _buildList(context, ref, startups),
       ),
     );
   }
@@ -76,15 +77,15 @@ class AdminVerificationScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildList(BuildContext context, List<Map<String, dynamic>> startups) {
+  Widget _buildList(BuildContext context, WidgetRef ref, List<Map<String, dynamic>> startups) {
     return ListView.builder(
       padding: const EdgeInsets.all(20),
       itemCount: startups.length,
-      itemBuilder: (context, index) => _buildCard(context, startups[index]),
+      itemBuilder: (context, index) => _buildCard(context, ref, startups[index]),
     );
   }
 
-  Widget _buildCard(BuildContext context, Map<String, dynamic> startup) {
+  Widget _buildCard(BuildContext context, WidgetRef ref, Map<String, dynamic> startup) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: GlassmorphicContainer(
@@ -156,7 +157,12 @@ class AdminVerificationScreen extends ConsumerWidget {
                     label: 'Approve',
                     icon: Icons.check_circle_outline,
                     color: AppColors.darkRed,
-                    onTap: () => _updateStatus(context, startup['id'] as String, 'approved'),
+                    onTap: () => _updateStatus(
+                      context, ref,
+                      startup['id'] as String,
+                      'approved',
+                      startup['startupName'] ?? startup['name'] ?? 'Unnamed Startup',
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -165,7 +171,12 @@ class AdminVerificationScreen extends ConsumerWidget {
                     label: 'Reject',
                     icon: Icons.cancel_outlined,
                     color: AppColors.textSecondary,
-                    onTap: () => _updateStatus(context, startup['id'] as String, 'rejected'),
+                    onTap: () => _updateStatus(
+                      context, ref,
+                      startup['id'] as String,
+                      'rejected',
+                      startup['startupName'] ?? startup['name'] ?? 'Unnamed Startup',
+                    ),
                   ),
                 ),
               ],
@@ -203,7 +214,13 @@ class AdminVerificationScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _updateStatus(BuildContext context, String id, String status) async {
+  Future<void> _updateStatus(
+    BuildContext context,
+    WidgetRef ref,
+    String id,
+    String status,
+    String startupName,
+  ) async {
     final batch = FirebaseFirestore.instance.batch();
 
     batch.update(
@@ -211,7 +228,6 @@ class AdminVerificationScreen extends ConsumerWidget {
       {'status': status},
     );
 
-    // Also update the user's approval flag so they can access the platform
     batch.update(
       FirebaseFirestore.instance.collection('users').doc(id),
       {
@@ -221,6 +237,13 @@ class AdminVerificationScreen extends ConsumerWidget {
     );
 
     await batch.commit();
+
+    // Notify the founder
+    await ref.read(notificationServiceProvider).notifyStartupStatus(
+          founderId: id,
+          startupName: startupName,
+          status: status,
+        );
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

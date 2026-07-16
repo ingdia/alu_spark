@@ -63,14 +63,10 @@ class StudentProfileScreen extends ConsumerWidget {
         Navigator.of(context).pushNamed(RouteNames.notifications);
         break;
       case 3:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Analytics coming soon')),
-        );
+        Navigator.of(context).pushNamed(RouteNames.analytics);
         break;
       case 4:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Settings coming soon')),
-        );
+        Navigator.of(context).pushNamed(RouteNames.settings);
         break;
       case 5:
         await ref.read(authRepositoryProvider).signOut();

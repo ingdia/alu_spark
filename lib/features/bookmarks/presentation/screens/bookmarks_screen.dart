@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:alu_spark/app/router/app_router.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
@@ -109,7 +110,19 @@ class BookmarksScreen extends ConsumerWidget {
             ),
           );
         },
-        child: GlassmorphicContainer(
+        child: GestureDetector(
+          onTap: () async {
+            final opportunity = await ref
+                .read(opportunityRepositoryProvider)
+                .getOpportunityById(bookmark.opportunityId);
+            if (opportunity != null && context.mounted) {
+              Navigator.of(context).pushNamed(
+                RouteNames.opportunityDetail,
+                arguments: opportunity,
+              );
+            }
+          },
+          child: GlassmorphicContainer(
           blur: 10,
           borderRadius: 16,
           padding: const EdgeInsets.all(16),
@@ -154,6 +167,7 @@ class BookmarksScreen extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),

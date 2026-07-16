@@ -67,14 +67,14 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         }
 
         // Email not verified yet — stay put (OTP screen handles this)
-        // Admin bypasses email verification requirement
-        final isAdminEmail = user.email.trim().toLowerCase() == 'ngabirediane02@gmail.com';
-        if (!user.isEmailVerified && !isAdminEmail) {
+        // Admin role bypasses email verification requirement
+        final isAdmin = user.email.trim().toLowerCase() == 'ngabirediane02@gmail.com';
+        if (!user.isEmailVerified && !isAdmin) {
           return const AppLoadingScreen();
         }
 
-        // Admin email always goes home — no Firestore doc required
-        if (isAdminEmail) {
+        // Hardcoded admin email always goes home — no Firestore doc required
+        if (isAdmin) {
           Future.microtask(() {
             ref.read(roleProvider.notifier).setRole(UserRole.admin);
             _navigateTo(RouteNames.home);
@@ -106,6 +106,15 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
               (r) => r.name == roleStr,
               orElse: () => UserRole.student,
             );
+
+            // Admin role from Firestore bypasses profile completion check
+            if (role == UserRole.admin) {
+              Future.microtask(() {
+                ref.read(roleProvider.notifier).setRole(UserRole.admin);
+                _navigateTo(RouteNames.home);
+              });
+              return const AppLoadingScreen();
+            }
 
             String destination;
             if (!profileComplete) {

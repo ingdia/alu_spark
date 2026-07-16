@@ -35,6 +35,8 @@ import 'package:alu_spark/features/auth/presentation/screens/startup_onboarding_
 import 'package:alu_spark/features/auth/presentation/screens/startup_pending_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/student_onboarding_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/profile_setup_screen.dart';
+import 'package:alu_spark/features/student_profile/presentation/screens/analytics_screen.dart';
+import 'package:alu_spark/features/student_profile/presentation/screens/settings_screen.dart';
 
 import 'package:alu_spark/core/widgets/auth_wrapper.dart';
 
@@ -70,6 +72,8 @@ class RouteNames {
   static const String profileSetup = '/profile-setup';
   static const String recruitmentManagement = '/recruitment-management';
   static const String applicantProfile = '/applicant-profile';
+  static const String analytics = '/analytics';
+  static const String settings = '/settings';
 }
 
 class AppRouter {
@@ -121,6 +125,7 @@ class AppRouter {
           builder: (_) => ChatDetailScreen(
             contactId: args['contactId'] ?? '',
             contactName: args['contactName'] ?? 'Unknown',
+            conversationId: args['conversationId'],
           ),
         );
         
@@ -130,6 +135,9 @@ class AppRouter {
       case RouteNames.startupOnboarding: return MaterialPageRoute(builder: (_) => const StartupOnboardingScreen());
       case RouteNames.startupPending: return MaterialPageRoute(builder: (_) => const StartupPendingScreen());
       case RouteNames.studentOnboarding: return MaterialPageRoute(builder: (_) => const StudentOnboardingScreen());
+
+      case RouteNames.analytics: return MaterialPageRoute(builder: (_) => const AnalyticsScreen());
+      case RouteNames.settings: return MaterialPageRoute(builder: (_) => const SettingsScreen());
 
       default:
         return MaterialPageRoute(
