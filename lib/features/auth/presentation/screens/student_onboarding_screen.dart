@@ -96,11 +96,10 @@ class _StudentOnboardingScreenState extends ConsumerState<StudentOnboardingScree
         'fullName': student.fullName,
       });
 
-      if (mounted) {
-        _showToast('Profile created! Welcome to ALU Spark 🎉');
-        await Future.delayed(const Duration(milliseconds: 800));
-        Navigator.of(context).pushNamedAndRemoveUntil(RouteNames.home, (_) => false);
-      }
+      if (!mounted) return;
+      _showToast('Profile created! Welcome to ALU Spark 🎉');
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (mounted) Navigator.of(context).pushNamedAndRemoveUntil(RouteNames.home, (_) => false);
     } catch (e) {
       if (mounted) {
         _showToast(e.toString().replaceFirst('Exception: ', ''), isError: true);

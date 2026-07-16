@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:alu_spark/features/opportunities/data/models/opportunity_model.dart';
 import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 import 'package:alu_spark/features/opportunities/domain/repositories/opportunity_repository.dart';
+export 'package:alu_spark/features/opportunities/domain/repositories/opportunity_repository.dart' show OpportunitySearchFilters;
 
 class OpportunityRepositoryImpl implements OpportunityRepository {
   final FirebaseFirestore _firestore;
@@ -22,6 +23,18 @@ class OpportunityRepositoryImpl implements OpportunityRepository {
         .snapshots()
         .map((s) => _sorted(
             s.docs.map((d) => OpportunityModel.fromFirestore(d).toEntity()).toList()));
+  }
+
+  @override
+  Stream<List<Opportunity>> searchOpportunities(OpportunitySearchFilters filters) {
+    Query<Map<String, dynamic>> q = _firestore
+        .collection(_col)
+        .where('isActive', isEqualTo: true);
+    if (filters.category != null) q = q.where('category', isEqualTo: filters.category);
+    if (filters.location != null) q = q.where('location', isEqualTo: filters.location);
+    if (filters.type != null) q = q.where('type', isEqualTo: filters.type);
+    return q.snapshots().map((s) =>
+        s.docs.map((d) => OpportunityModel.fromFirestore(d).toEntity()).toList());
   }
 
   @override

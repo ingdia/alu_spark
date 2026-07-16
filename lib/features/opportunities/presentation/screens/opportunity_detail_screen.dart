@@ -668,7 +668,7 @@ class _OpportunityDetailScreenState
                 child: CircularProgressIndicator(
                     color: AppColors.darkRed, strokeWidth: 2)),
           ),
-          error: (_, __) => _applyButton(context),
+          error: (_, _) => _applyButton(context),
           data: (app) {
             if (app == null) {
               if (opportunity.status != OpportunityStatus.active) {

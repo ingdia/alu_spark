@@ -1,8 +1,17 @@
 import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 
+class OpportunitySearchFilters {
+  final String? category;
+  final String? location;
+  final String? type;
+
+  const OpportunitySearchFilters({this.category, this.location, this.type});
+}
+
 abstract class OpportunityRepository {
   Stream<List<Opportunity>> getOpportunities();
   Stream<List<Opportunity>> getOpportunitiesByCategory(String category);
+  Stream<List<Opportunity>> searchOpportunities(OpportunitySearchFilters filters);
   Future<Opportunity?> getOpportunityById(String id);
   Future<String> createOpportunity(Opportunity opportunity);
   Future<void> updateOpportunity(Opportunity opportunity);

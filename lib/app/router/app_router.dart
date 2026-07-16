@@ -13,7 +13,7 @@ import 'package:alu_spark/features/opportunities/presentation/screens/discover_s
 import 'package:alu_spark/features/opportunities/presentation/screens/search_screen.dart';
 import 'package:alu_spark/features/opportunities/presentation/screens/opportunity_detail_screen.dart';
 import 'package:alu_spark/features/opportunities/presentation/screens/post_opportunity_screen.dart';
-import 'package:alu_spark/features/opportunities/presentation/screens/edit_opportunity_screen.dart';
+import 'package:alu_spark/features/opportunities/presentation/screens/opportunity_management_screen.dart';
 import 'package:alu_spark/features/student_profile/presentation/screens/student_profile_screen.dart';
 import 'package:alu_spark/features/student_profile/presentation/screens/student_profile_edit_screen.dart';
 import 'package:alu_spark/features/startup_profile/presentation/screens/startup_profile_screen.dart';
@@ -38,6 +38,7 @@ import 'package:alu_spark/features/auth/presentation/screens/student_onboarding_
 import 'package:alu_spark/features/auth/presentation/screens/profile_setup_screen.dart';
 import 'package:alu_spark/features/student_profile/presentation/screens/analytics_screen.dart';
 import 'package:alu_spark/features/student_profile/presentation/screens/settings_screen.dart';
+import 'package:alu_spark/features/startup_profile/presentation/screens/founder_analytics_screen.dart';
 
 import 'package:alu_spark/core/widgets/auth_wrapper.dart';
 
@@ -52,6 +53,7 @@ class RouteNames {
   static const String search = '/search';
   static const String postOpportunity = '/post-opportunity';
   static const String editOpportunity = '/edit-opportunity';
+  static const String opportunityManagement = '/opportunity-management';
   static const String opportunityDetail = '/opportunity-detail';
   static const String studentProfile = '/student-profile';
   static const String studentProfileEdit = '/student-profile-edit';
@@ -75,6 +77,7 @@ class RouteNames {
   static const String recruitmentManagement = '/recruitment-management';
   static const String applicantProfile = '/applicant-profile';
   static const String analytics = '/analytics';
+  static const String founderAnalytics = '/founder-analytics';
   static const String settings = '/settings';
 }
 
@@ -98,7 +101,8 @@ class AppRouter {
       case RouteNames.postOpportunity: return MaterialPageRoute(builder: (_) => const PostOpportunityScreen());
       case RouteNames.editOpportunity:
         final opportunity = settings.arguments as Opportunity;
-        return MaterialPageRoute(builder: (_) => EditOpportunityScreen(opportunity: opportunity));
+        return MaterialPageRoute(builder: (_) => PostOpportunityScreen(initial: opportunity));
+      case RouteNames.opportunityManagement: return MaterialPageRoute(builder: (_) => const OpportunityManagementScreen());
       
       case RouteNames.opportunityDetail:
         final opportunity = settings.arguments as Opportunity;
@@ -142,6 +146,7 @@ class AppRouter {
       case RouteNames.studentOnboarding: return MaterialPageRoute(builder: (_) => const StudentOnboardingScreen());
 
       case RouteNames.analytics: return MaterialPageRoute(builder: (_) => const AnalyticsScreen());
+      case RouteNames.founderAnalytics: return MaterialPageRoute(builder: (_) => const FounderAnalyticsScreen());
       case RouteNames.settings: return MaterialPageRoute(builder: (_) => const SettingsScreen());
 
       default:

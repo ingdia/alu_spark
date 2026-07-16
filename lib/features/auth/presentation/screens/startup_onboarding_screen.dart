@@ -1,4 +1,3 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
@@ -36,10 +35,9 @@ class _StartupOnboardingScreenState
   final _step2Key = GlobalKey<FormState>();
   final List<_FounderEntry> _founders = [_FounderEntry()];
 
-  // Step 3 — Proof document
-  PlatformFile? _proofFile;
+  // Step 3 — Proof document link
+  final _proofLinkController = TextEditingController();
   final _descController = TextEditingController();
-  String? _proofError;
 
   static const _industries = [
     'Technology', 'FinTech', 'HealthTech', 'EdTech',
@@ -55,6 +53,7 @@ class _StartupOnboardingScreenState
     _startupTaglineController.dispose();
     _websiteController.dispose();
     _linkedinController.dispose();
+    _proofLinkController.dispose();
     _descController.dispose();
     for (final f in _founders) {
       f.dispose();
@@ -69,7 +68,6 @@ class _StartupOnboardingScreenState
     } else if (next.status == AuthStatus.error) {
       final msg = next.errorMessage ?? 'An error occurred. Please try again.';
       ref.read(authNotifierProvider.notifier).reset();
-      // Show error in a dialog so it can't be missed
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
@@ -77,12 +75,14 @@ class _StartupOnboardingScreenState
           title: Text('Submission Failed',
               style: AppTextStyles.headingMedium.copyWith(fontSize: 16)),
           content: Text(msg,
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textSecondary)),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text('OK',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed)),
+                  style:
+                      AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed)),
             ),
           ],
         ),
@@ -116,7 +116,8 @@ class _StartupOnboardingScreenState
                     ),
                   ],
                 ),
-                child: const Icon(Icons.check_rounded, color: AppColors.white, size: 36),
+                child: const Icon(Icons.check_rounded,
+                    color: AppColors.white, size: 36),
               ),
               const SizedBox(height: 20),
               Text(
@@ -140,7 +141,7 @@ class _StartupOnboardingScreenState
                 height: 48,
                 child: GestureDetector(
                   onTap: () => Navigator.pushNamedAndRemoveUntil(
-                    context, RouteNames.startupPending, (_) => false),
+                      context, RouteNames.startupPending, (_) => false),
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: AppColors.redGradient,
@@ -185,20 +186,6 @@ class _StartupOnboardingScreenState
     }
   }
 
-  Future<void> _pickDocument() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-      withData: true, // ensures bytes are always available
-    );
-    if (result != null) {
-      setState(() {
-        _proofFile = result.files.first;
-        _proofError = null;
-      });
-    }
-  }
-
   void _submit() {
     ref.read(authNotifierProvider.notifier).registerStartup(
       startupName: _startupNameController.text.trim(),
@@ -216,9 +203,9 @@ class _StartupOnboardingScreenState
               })
           .toList(),
       description: _descController.text.trim(),
-      proofFilePath: _proofFile?.path,
-      proofFileBytes: _proofFile?.bytes,
-      proofFileName: _proofFile?.name ?? '',
+      proofFilePath: null,
+      proofFileBytes: null,
+      proofFileName: _proofLinkController.text.trim(),
     );
   }
 
@@ -256,7 +243,7 @@ class _StartupOnboardingScreenState
     final subtitles = [
       'Tell us about your startup',
       'Who are the founding team?',
-      'Upload proof for admin review',
+      'Share a link to your proof document',
     ];
 
     return Padding(
@@ -270,7 +257,8 @@ class _StartupOnboardingScreenState
                 blur: 10,
                 borderRadius: 10,
                 padding: const EdgeInsets.all(10),
-                child: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 16),
+                child: const Icon(Icons.arrow_back_ios_new,
+                    color: AppColors.white, size: 16),
               ),
             )
           else
@@ -280,7 +268,8 @@ class _StartupOnboardingScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(titles[_step], style: AppTextStyles.headingMedium.copyWith(fontSize: 20)),
+                Text(titles[_step],
+                    style: AppTextStyles.headingMedium.copyWith(fontSize: 20)),
                 Text(subtitles[_step],
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.textSecondary,
@@ -433,7 +422,8 @@ class _StartupOnboardingScreenState
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.add_circle_outline, color: AppColors.darkRed, size: 18),
+                      const Icon(Icons.add_circle_outline,
+                          color: AppColors.darkRed, size: 18),
                       const SizedBox(width: 8),
                       Text('Add Another Founder',
                           style: AppTextStyles.bodyMedium.copyWith(
@@ -452,7 +442,7 @@ class _StartupOnboardingScreenState
     );
   }
 
-  // ── Step 3: Proof Document ────────────────────────────────────────────────
+  // ── Step 3: Proof Document Link ───────────────────────────────────────────
   Widget _buildStep3(bool isLoading) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
@@ -501,14 +491,14 @@ class _StartupOnboardingScreenState
           ),
           const SizedBox(height: 20),
 
-          Text('Proof Document (optional)',
+          Text('Proof Document Link (optional)',
               style: AppTextStyles.bodyLarge.copyWith(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               )),
           const SizedBox(height: 6),
           Text(
-            'Upload a business registration certificate, pitch deck, or any official document that verifies your startup.',
+            'Paste a link to your business registration certificate, pitch deck, or any official document that verifies your startup (Google Drive, Dropbox, OneDrive, etc.).',
             style: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.textSecondary,
               fontSize: 12,
@@ -517,69 +507,40 @@ class _StartupOnboardingScreenState
           ),
           const SizedBox(height: 14),
 
-          GestureDetector(
-            onTap: _pickDocument,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 28),
-              decoration: BoxDecoration(
-                color: _proofFile != null
-                    ? AppColors.darkRed.withValues(alpha: 0.08)
-                    : AppColors.glassWhite,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: _proofError != null
-                      ? AppColors.darkRed
-                      : _proofFile != null
-                          ? AppColors.darkRed
-                          : AppColors.borderGlass,
-                  width: (_proofFile != null || _proofError != null) ? 1.5 : 1,
+          GlassmorphicContainer(
+            blur: 10,
+            borderRadius: 14,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: TextField(
+              controller: _proofLinkController,
+              keyboardType: TextInputType.url,
+              autocorrect: false,
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.white, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'https://drive.google.com/...',
+                hintStyle: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
                 ),
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    _proofFile != null
-                        ? Icons.check_circle_rounded
-                        : Icons.upload_file_rounded,
-                    color: _proofFile != null ? AppColors.darkRed : AppColors.textSecondary,
-                    size: 36,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    _proofFile != null ? _proofFile!.name : 'Tap to upload document',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: _proofFile != null ? AppColors.white : AppColors.textSecondary,
-                      fontWeight: _proofFile != null ? FontWeight.w600 : FontWeight.w400,
-                      fontSize: 13,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'PDF, JPG or PNG • Max 10MB',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
+                prefixIcon: const Icon(Icons.link_rounded,
+                    color: AppColors.darkRed, size: 20),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
               ),
             ),
           ),
-          if (_proofError != null) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const Icon(Icons.error_outline, color: AppColors.darkRed, size: 14),
-                const SizedBox(width: 6),
-                Text(_proofError!,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.darkRed, fontSize: 12)),
-              ],
-            ),
-          ],
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              _linkChip('Google Drive', Icons.add_to_drive_outlined),
+              _linkChip('Dropbox', Icons.cloud_outlined),
+              _linkChip('OneDrive', Icons.cloud_queue_outlined),
+              _linkChip('Notion', Icons.article_outlined),
+            ],
+          ),
           const SizedBox(height: 20),
 
           GlassmorphicContainer(
@@ -610,6 +571,27 @@ class _StartupOnboardingScreenState
             icon: Icons.send_rounded,
           ),
           const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _linkChip(String label, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.glassWhite,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderGlass),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: AppColors.textSecondary),
+          const SizedBox(width: 5),
+          Text(label,
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textSecondary, fontSize: 11)),
         ],
       ),
     );
@@ -734,7 +716,8 @@ class _DropdownField extends StatelessWidget {
         initialValue: value,
         dropdownColor: AppColors.darkBlueLight,
         style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
-        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
+        icon: const Icon(Icons.keyboard_arrow_down_rounded,
+            color: AppColors.textSecondary),
         decoration: InputDecoration(
           prefixIcon: Icon(icon, color: AppColors.darkRed, size: 18),
           labelText: label,
@@ -748,7 +731,9 @@ class _DropdownField extends StatelessWidget {
         items: items
             .map((e) => DropdownMenuItem(
                   value: e,
-                  child: Text(e, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white)),
+                  child: Text(e,
+                      style: AppTextStyles.bodyMedium
+                          .copyWith(color: AppColors.white)),
                 ))
             .toList(),
         onChanged: onChanged,
@@ -784,14 +769,21 @@ class _PrimaryButton extends StatelessWidget {
             color: onTap == null ? AppColors.glassWhite : null,
             borderRadius: BorderRadius.circular(14),
             boxShadow: onTap != null
-                ? [BoxShadow(color: AppColors.darkRed.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 8))]
+                ? [
+                    BoxShadow(
+                        color: AppColors.darkRed.withValues(alpha: 0.4),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8))
+                  ]
                 : [],
           ),
           child: Center(
             child: isLoading
                 ? const SizedBox(
-                    width: 22, height: 22,
-                    child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2),
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                        color: AppColors.white, strokeWidth: 2),
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,

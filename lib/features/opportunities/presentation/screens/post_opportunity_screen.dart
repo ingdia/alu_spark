@@ -9,33 +9,65 @@ import 'package:alu_spark/core/providers/repository_providers.dart';
 import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 
 class PostOpportunityScreen extends ConsumerStatefulWidget {
-  const PostOpportunityScreen({super.key});
+  /// When non-null the screen operates in edit mode.
+  final Opportunity? initial;
+
+  const PostOpportunityScreen({super.key, this.initial});
 
   @override
-  ConsumerState<PostOpportunityScreen> createState() => _PostOpportunityScreenState();
+  ConsumerState<PostOpportunityScreen> createState() =>
+      _PostOpportunityScreenState();
 }
 
-class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
+class _PostOpportunityScreenState
+    extends ConsumerState<PostOpportunityScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _salaryController = TextEditingController();
+  late final TextEditingController _titleController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _salaryController;
   final _reqInputController = TextEditingController();
   final _benInputController = TextEditingController();
 
-  String _selectedCategory = 'Tech';
-  String _selectedLocation = 'Kigali';
-  String _selectedType = 'Internship';
+  late String _selectedCategory;
+  late String _selectedLocation;
+  late String _selectedType;
 
-  // Using final for lists to align with project conventions
-  final List<String> _categories = ['Tech', 'Design', 'Marketing', 'Business', 'Finance'];
-  final List<String> _locations = ['Kigali', 'Remote', 'Nairobi', 'Cape Town', 'Lagos'];
-  final List<String> _types = ['Internship', 'Part-time', 'Full-time', 'Freelance'];
+  final List<String> _categories = [
+    'Tech', 'Design', 'Marketing', 'Business', 'Finance'
+  ];
+  final List<String> _locations = [
+    'Kigali', 'Remote', 'Nairobi', 'Cape Town', 'Lagos'
+  ];
+  final List<String> _types = [
+    'Internship', 'Part-time', 'Full-time', 'Freelance'
+  ];
 
-  final List<String> _requirements = [];
-  final List<String> _benefits = [];
-  
-  bool _isPosting = false;
+  late List<String> _requirements;
+  late List<String> _benefits;
+
+  bool _isSubmitting = false;
+
+  bool get _isEditing => widget.initial != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final o = widget.initial;
+    _titleController = TextEditingController(text: o?.title ?? '');
+    _descriptionController =
+        TextEditingController(text: o?.description ?? '');
+    _salaryController = TextEditingController(text: o?.salary ?? '');
+    _selectedCategory = (o != null && _categories.contains(o.category))
+        ? o.category
+        : _categories.first;
+    _selectedLocation = (o != null && _locations.contains(o.location))
+        ? o.location
+        : _locations.first;
+    _selectedType =
+        (o != null && _types.contains(o.type)) ? o.type : _types.first;
+    _requirements = List<String>.from(o?.requirements ?? []);
+    _benefits = List<String>.from(o?.benefits ?? []);
+  }
 
   @override
   void dispose() {
@@ -47,83 +79,103 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
     super.dispose();
   }
 
-  Future<void> _handlePostOpportunity() async {
+  Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isPosting = true);
-
+    setState(() => _isSubmitting = true);
     try {
-      final authState = ref.read(authStateProvider);
-      final currentUser = authState.value;
-      if (currentUser == null) throw Exception('Not logged in');
+      final repo = ref.read(opportunityRepositoryProvider);
+      final salary = _salaryController.text.trim().isEmpty
+          ? null
+          : _salaryController.text.trim();
 
-      // Read startup info from Firestore for the logged-in founder
-      final startupDoc = await FirebaseFirestore.instance
-          .collection('startups')
-          .doc(currentUser.id)
-          .get();
-      final startupData = startupDoc.data();
-      final startupId = currentUser.id;
-      final startupName = startupData?['startupName'] as String? ?? currentUser.fullName;
-
-      final opportunity = Opportunity(
-        id: '',
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim(),
-        startupId: startupId,
-        startupName: startupName,
-        category: _selectedCategory,
-        location: _selectedLocation,
-        type: _selectedType,
-        salary: _salaryController.text.trim().isEmpty ? null : _salaryController.text.trim(),
-        requirements: _requirements,
-        benefits: _benefits,
-        createdAt: DateTime.now(),
-      );
-
-      await ref.read(opportunityRepositoryProvider).createOpportunity(opportunity);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(children: [
-              const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
-              const SizedBox(width: 10),
-              Text('Opportunity posted successfully!',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white)),
-            ]),
-            backgroundColor: const Color(0xFF1B5E20),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
-          ),
+      if (_isEditing) {
+        final updated = widget.initial!.copyWith(
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          category: _selectedCategory,
+          location: _selectedLocation,
+          type: _selectedType,
+          salary: salary,
+          requirements: List<String>.from(_requirements),
+          benefits: List<String>.from(_benefits),
         );
-        _titleController.clear();
-        _descriptionController.clear();
-        _salaryController.clear();
-        setState(() { _requirements.clear(); _benefits.clear(); });
-        Navigator.of(context).pop();
+        await repo.updateOpportunity(updated);
+        if (mounted) {
+          _showSnack('Opportunity updated!', success: true);
+          Navigator.of(context).pop(true);
+        }
+      } else {
+        final authState = ref.read(authStateProvider);
+        final currentUser = authState.value;
+        if (currentUser == null) throw Exception('Not logged in');
+
+        final startupDoc = await FirebaseFirestore.instance
+            .collection('startups')
+            .doc(currentUser.id)
+            .get();
+        final startupData = startupDoc.data();
+        final startupName =
+            startupData?['startupName'] as String? ?? currentUser.fullName;
+
+        final opportunity = Opportunity(
+          id: '',
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          startupId: currentUser.id,
+          startupName: startupName,
+          category: _selectedCategory,
+          location: _selectedLocation,
+          type: _selectedType,
+          salary: salary,
+          requirements: List<String>.from(_requirements),
+          benefits: List<String>.from(_benefits),
+          createdAt: DateTime.now(),
+        );
+        await repo.createOpportunity(opportunity);
+        if (mounted) {
+          _showSnack('Opportunity posted successfully!', success: true);
+          _titleController.clear();
+          _descriptionController.clear();
+          _salaryController.clear();
+          setState(() {
+            _requirements.clear();
+            _benefits.clear();
+          });
+          Navigator.of(context).pop(true);
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(children: [
-              const Icon(Icons.error_outline, color: Colors.white, size: 18),
-              const SizedBox(width: 10),
-              Expanded(child: Text('Failed to post: $e',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white))),
-            ]),
-            backgroundColor: AppColors.darkRed,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        _showSnack(
+            _isEditing ? 'Failed to update: $e' : 'Failed to post: $e');
       }
     } finally {
-      if (mounted) setState(() => _isPosting = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  void _showSnack(String msg, {bool success = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Row(children: [
+        Icon(
+          success ? Icons.check_circle_outline : Icons.error_outline,
+          color: Colors.white,
+          size: 18,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(msg,
+              style:
+                  AppTextStyles.bodyMedium.copyWith(color: AppColors.white)),
+        ),
+      ]),
+      backgroundColor:
+          success ? const Color(0xFF1B5E20) : AppColors.darkRed,
+      behavior: SnackBarBehavior.floating,
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.all(16),
+    ));
   }
 
   @override
@@ -138,85 +190,120 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle('Basic Information'),
+              _sectionTitle('Basic Information'),
               const SizedBox(height: 16),
-              _buildGlassTextField(
+              _glassTextField(
                 controller: _titleController,
                 hintText: 'Opportunity Title (e.g., Frontend Developer)',
                 prefixIcon: Icons.work_outline,
                 required: true,
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildGlassDropdown(
-                      label: 'Category',
-                      value: _selectedCategory,
-                      items: _categories,
-                      onChanged: (val) => setState(() => _selectedCategory = val!),
-                    ),
+              Row(children: [
+                Expanded(
+                  child: _glassDropdown(
+                    value: _selectedCategory,
+                    items: _categories,
+                    onChanged: (v) =>
+                        setState(() => _selectedCategory = v!),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildGlassDropdown(
-                      label: 'Type',
-                      value: _selectedType,
-                      items: _types,
-                      onChanged: (val) => setState(() => _selectedType = val!),
-                    ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _glassDropdown(
+                    value: _selectedType,
+                    items: _types,
+                    onChanged: (v) => setState(() => _selectedType = v!),
                   ),
-                ],
-              ),
+                ),
+              ]),
               const SizedBox(height: 16),
-              _buildGlassDropdown(
-                label: 'Location',
+              _glassDropdown(
                 value: _selectedLocation,
                 items: _locations,
-                onChanged: (val) => setState(() => _selectedLocation = val!),
+                onChanged: (v) => setState(() => _selectedLocation = v!),
               ),
               const SizedBox(height: 16),
-              _buildGlassTextField(
+              _glassTextField(
                 controller: _salaryController,
                 hintText: 'Compensation (e.g., \$500/month or Unpaid)',
                 prefixIcon: Icons.attach_money,
               ),
               const SizedBox(height: 32),
-              
-              _buildSectionTitle('Description'),
+              _sectionTitle('Description'),
               const SizedBox(height: 16),
-              _buildGlassTextField(
+              _glassTextField(
                 controller: _descriptionController,
-                hintText: 'Describe the role, responsibilities, and goals...',
+                hintText:
+                    'Describe the role, responsibilities, and goals...',
                 prefixIcon: Icons.description_outlined,
                 maxLines: 5,
                 required: true,
               ),
               const SizedBox(height: 32),
-
-              _buildSectionTitle('Requirements'),
+              _sectionTitle('Requirements'),
               const SizedBox(height: 16),
-              _buildAddItemField(
+              _addItemField(
                 controller: _reqInputController,
                 hintText: 'Add a requirement...',
                 items: _requirements,
-                onAdd: _addRequirement,
-                onRemove: _removeRequirement,
+                onAdd: () {
+                  if (_reqInputController.text.trim().isNotEmpty) {
+                    setState(() {
+                      _requirements
+                          .add(_reqInputController.text.trim());
+                      _reqInputController.clear();
+                    });
+                  }
+                },
+                onRemove: (i) =>
+                    setState(() => _requirements.removeAt(i)),
               ),
               const SizedBox(height: 32),
-
-              _buildSectionTitle('Benefits'),
+              _sectionTitle('Benefits'),
               const SizedBox(height: 16),
-              _buildAddItemField(
+              _addItemField(
                 controller: _benInputController,
                 hintText: 'Add a benefit...',
                 items: _benefits,
-                onAdd: _addBenefit,
-                onRemove: _removeBenefit,
+                onAdd: () {
+                  if (_benInputController.text.trim().isNotEmpty) {
+                    setState(() {
+                      _benefits.add(_benInputController.text.trim());
+                      _benInputController.clear();
+                    });
+                  }
+                },
+                onRemove: (i) => setState(() => _benefits.removeAt(i)),
               ),
               const SizedBox(height: 40),
-
-              _buildSubmitButton(),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isSubmitting ? null : _handleSubmit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.darkRed,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                              color: AppColors.white, strokeWidth: 2),
+                        )
+                      : Text(
+                          _isEditing
+                              ? 'Save Changes'
+                              : 'Post Opportunity',
+                          style: AppTextStyles.bodyLarge
+                              .copyWith(color: AppColors.white),
+                        ),
+                ),
+              ),
               const SizedBox(height: 20),
             ],
           ),
@@ -236,27 +323,24 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
           borderRadius: 12,
           padding: const EdgeInsets.all(0),
           child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 18),
+            icon: const Icon(Icons.arrow_back_ios_new,
+                color: AppColors.white, size: 18),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
       ),
       title: Text(
-        'Post Opportunity',
+        _isEditing ? 'Edit Opportunity' : 'Post Opportunity',
         style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
       ),
       centerTitle: true,
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
-    );
-  }
+  Widget _sectionTitle(String title) => Text(title,
+      style: AppTextStyles.headingMedium.copyWith(color: AppColors.white));
 
-  Widget _buildGlassTextField({
+  Widget _glassTextField({
     required TextEditingController controller,
     required String hintText,
     IconData? prefixIcon,
@@ -272,12 +356,17 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
         maxLines: maxLines,
         style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
         validator: required
-            ? (v) => (v == null || v.trim().isEmpty) ? 'This field is required' : null
+            ? (v) => (v == null || v.trim().isEmpty)
+                ? 'This field is required'
+                : null
             : null,
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
-          prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: AppColors.darkRed) : null,
+          hintStyle: AppTextStyles.bodyMedium
+              .copyWith(color: AppColors.textSecondary),
+          prefixIcon: prefixIcon != null
+              ? Icon(prefixIcon, color: AppColors.darkRed)
+              : null,
           border: InputBorder.none,
           errorStyle: const TextStyle(color: Color(0xFFFF6B6B)),
           contentPadding: const EdgeInsets.symmetric(vertical: 16),
@@ -286,8 +375,7 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
     );
   }
 
-  Widget _buildGlassDropdown({
-    required String label,
+  Widget _glassDropdown({
     required String value,
     required List<String> items,
     required ValueChanged<String?> onChanged,
@@ -300,22 +388,22 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
         child: DropdownButton<String>(
           value: value,
           dropdownColor: AppColors.darkBlueLight,
-          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
-          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.white),
+          style:
+              AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
+          icon: const Icon(Icons.keyboard_arrow_down,
+              color: AppColors.white),
           isExpanded: true,
-          items: items.map((String item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(item),
-            );
-          }).toList(),
+          items: items
+              .map((item) => DropdownMenuItem<String>(
+                  value: item, child: Text(item)))
+              .toList(),
           onChanged: onChanged,
         ),
       ),
     );
   }
 
-  Widget _buildAddItemField({
+  Widget _addItemField({
     required TextEditingController controller,
     required String hintText,
     required List<String> items,
@@ -334,18 +422,22 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
               Expanded(
                 child: TextField(
                   controller: controller,
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
+                  style: AppTextStyles.bodyMedium
+                      .copyWith(color: AppColors.white),
                   decoration: InputDecoration(
                     hintText: hintText,
-                    hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                    hintStyle: AppTextStyles.bodyMedium
+                        .copyWith(color: AppColors.textSecondary),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                    contentPadding:
+                        const EdgeInsets.symmetric(vertical: 16),
                   ),
                   onSubmitted: (_) => onAdd(),
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.add_circle_outline, color: AppColors.darkRed),
+                icon: const Icon(Icons.add_circle_outline,
+                    color: AppColors.darkRed),
                 onPressed: onAdd,
               ),
             ],
@@ -358,7 +450,8 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
             runSpacing: 8,
             children: List.generate(items.length, (index) {
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: AppColors.glassWhite,
                   borderRadius: BorderRadius.circular(20),
@@ -367,14 +460,14 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      items[index],
-                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
-                    ),
+                    Text(items[index],
+                        style: AppTextStyles.bodyMedium
+                            .copyWith(color: AppColors.white)),
                     const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () => onRemove(index),
-                      child: const Icon(Icons.close, color: AppColors.textSecondary, size: 16),
+                      child: const Icon(Icons.close,
+                          color: AppColors.textSecondary, size: 16),
                     ),
                   ],
                 ),
@@ -382,62 +475,6 @@ class _PostOpportunityScreenState extends ConsumerState<PostOpportunityScreen> {
             }),
           ),
       ],
-    );
-  }
-
-  void _addRequirement() {
-    if (_reqInputController.text.trim().isNotEmpty) {
-      setState(() {
-        _requirements.add(_reqInputController.text.trim());
-        _reqInputController.clear();
-      });
-    }
-  }
-
-  void _removeRequirement(int index) {
-    setState(() => _requirements.removeAt(index));
-  }
-
-  void _addBenefit() {
-    if (_benInputController.text.trim().isNotEmpty) {
-      setState(() {
-        _benefits.add(_benInputController.text.trim());
-        _benInputController.clear();
-      });
-    }
-  }
-
-  void _removeBenefit(int index) {
-    setState(() => _benefits.removeAt(index));
-  }
-
-  Widget _buildSubmitButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
-        onPressed: _isPosting ? null : _handlePostOpportunity,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.darkRed,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 0,
-        ),
-        child: _isPosting
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: AppColors.white,
-                  strokeWidth: 2,
-                ),
-              )
-            : Text(
-                'Post Opportunity',
-                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
-              ),
-      ),
     );
   }
 }

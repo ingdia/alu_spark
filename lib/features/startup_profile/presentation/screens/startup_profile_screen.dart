@@ -56,6 +56,10 @@ class StartupProfileScreen extends ConsumerWidget {
           ),
           actions: [
             IconButton(
+              icon: const Icon(Icons.edit_rounded, color: AppColors.white),
+              onPressed: () => Navigator.of(context).pushNamed(RouteNames.startupProfileEdit),
+            ),
+            IconButton(
               icon: const Icon(Icons.share_outlined, color: AppColors.white),
               // TODO: Share startup profile — no share screen exists. Wire when share functionality is implemented.
               onPressed: () {},
@@ -76,13 +80,35 @@ class StartupProfileScreen extends ConsumerWidget {
                   children: [
                     const SizedBox(height: 40),
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      width: 88,
+                      height: 88,
                       decoration: BoxDecoration(
                         color: AppColors.glassWhite,
                         shape: BoxShape.circle,
                         border: Border.all(color: AppColors.borderGlass),
                       ),
-                      child: const Icon(Icons.business, size: 45, color: AppColors.darkRed),
+                      child: startup.logoUrl != null
+                          ? ClipOval(
+                              child: Image.network(
+                                startup.logoUrl!,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (_, child, progress) =>
+                                    progress == null
+                                        ? child
+                                        : const Center(
+                                            child: CircularProgressIndicator(
+                                              color: AppColors.darkRed,
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                errorBuilder: (_, e, s) => const Icon(
+                                    Icons.business,
+                                    size: 45,
+                                    color: AppColors.darkRed),
+                              ),
+                            )
+                          : const Icon(Icons.business,
+                              size: 45, color: AppColors.darkRed),
                     ),
                     const SizedBox(height: 12),
                     Text(startup.name, style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),

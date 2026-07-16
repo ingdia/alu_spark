@@ -10,26 +10,46 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
 
   @override
   Future<PlatformStats> getPlatformStats() async {
-    // Note: In a production app, use Cloud Functions to maintain a 'stats' document 
-    // to avoid reading entire collections on every load.
-    final usersSnap = await _firestore.collection('users').get();
-    final oppsSnap = await _firestore.collection('opportunities').get();
-    final appsSnap = await _firestore.collection('applications').get();
+    final usersCol = _firestore.collection('users');
+    final oppsCol = _firestore.collection('opportunities');
+    final appsCol = _firestore.collection('applications');
 
-    int students = 0;
-    int founders = 0;
+    // Parallel aggregation counts
+    final results = await Future.wait([
+      usersCol.where('role', isEqualTo: 'student').count().get(),
+      usersCol.where('role', isEqualTo: 'founder').count().get(),
+      oppsCol.count().get(),
+      appsCol.count().get(),
+    ]);
 
-    for (var doc in usersSnap.docs) {
-      final role = doc.data()['role'];
-      if (role == 'student') students++;
-      if (role == 'founder') founders++;
+    final totalStudents = results[0].count ?? 0;
+    final totalFounders = results[1].count ?? 0;
+    final totalOpportunities = results[2].count ?? 0;
+    final totalApplications = results[3].count ?? 0;
+
+    // Applications by status — fetch only the status field
+    final appsSnap = await appsCol.get();
+    final Map<String, int> appsByStatus = {};
+    for (final doc in appsSnap.docs) {
+      final status = (doc.data()['status'] as String?) ?? 'applied';
+      appsByStatus[status] = (appsByStatus[status] ?? 0) + 1;
+    }
+
+    // Opportunities by category — fetch only the category field
+    final oppsSnap = await oppsCol.get();
+    final Map<String, int> oppsByCategory = {};
+    for (final doc in oppsSnap.docs) {
+      final category = (doc.data()['category'] as String?) ?? 'Other';
+      oppsByCategory[category] = (oppsByCategory[category] ?? 0) + 1;
     }
 
     return PlatformStats(
-      totalStudents: students,
-      totalFounders: founders,
-      totalOpportunities: oppsSnap.size,
-      totalApplications: appsSnap.size,
+      totalStudents: totalStudents,
+      totalFounders: totalFounders,
+      totalOpportunities: totalOpportunities,
+      totalApplications: totalApplications,
+      applicationsByStatus: appsByStatus,
+      opportunitiesByCategory: oppsByCategory,
     );
   }
 }

@@ -8,10 +8,12 @@ import 'package:alu_spark/core/widgets/loading_widget.dart';
 import 'package:alu_spark/core/widgets/error_state_widget.dart';
 import 'package:alu_spark/features/applications/presentation/providers/application_provider.dart';
 import 'package:alu_spark/features/applications/domain/entities/application.dart';
+import 'package:alu_spark/features/opportunities/presentation/providers/opportunity_provider.dart';
+import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 import 'package:alu_spark/shared/enums/application_status.dart';
 
-class AnalyticsScreen extends ConsumerWidget {
-  const AnalyticsScreen({super.key});
+class FounderAnalyticsScreen extends ConsumerWidget {
+  const FounderAnalyticsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,27 +36,49 @@ class AnalyticsScreen extends ConsumerWidget {
             ),
           ),
         ),
-        title: Text('My Analytics', style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
+        title: Text('Recruitment Analytics',
+            style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
         centerTitle: true,
       ),
       body: currentUser == null
           ? const LoadingWidget(message: 'Loading...')
-          : ref.watch(applicationsByStudentProvider(currentUser.id)).when(
-              loading: () => const LoadingWidget(message: 'Loading analytics...'),
-              error: (e, _) => ErrorStateWidget(
-                message: e.toString(),
-                onRetry: () => ref.invalidate(applicationsByStudentProvider(currentUser.id)),
-              ),
-              data: (apps) => _buildContent(apps),
-            ),
+          : _FounderAnalyticsBody(startupId: currentUser.id),
+    );
+  }
+}
+
+class _FounderAnalyticsBody extends ConsumerWidget {
+  final String startupId;
+  const _FounderAnalyticsBody({required this.startupId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final appsAsync = ref.watch(applicationsByStartupProvider(startupId));
+    final oppsAsync = ref.watch(founderOpportunitiesProvider(startupId));
+
+    return appsAsync.when(
+      loading: () => const LoadingWidget(message: 'Loading analytics...'),
+      error: (e, _) => ErrorStateWidget(
+        message: e.toString(),
+        onRetry: () => ref.invalidate(applicationsByStartupProvider(startupId)),
+      ),
+      data: (apps) => oppsAsync.when(
+        loading: () => const LoadingWidget(message: 'Loading analytics...'),
+        error: (e, _) => ErrorStateWidget(
+          message: e.toString(),
+          onRetry: () => ref.invalidate(founderOpportunitiesProvider(startupId)),
+        ),
+        data: (opps) => _buildContent(apps, opps),
+      ),
     );
   }
 
-  Widget _buildContent(List<Application> apps) {
-    final total = apps.length;
+  Widget _buildContent(List<Application> apps, List<Opportunity> opps) {
+    final posted = opps.length;
+    final received = apps.length;
     final interviews = apps.where((a) => a.status == ApplicationStatus.interview).length;
     final accepted = apps.where((a) => a.status == ApplicationStatus.accepted).length;
-    final rejected = apps.where((a) => a.status == ApplicationStatus.rejected).length;
+    final interviewRate = received > 0 ? (interviews / received * 100) : 0.0;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -62,15 +86,31 @@ class AnalyticsScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            _StatCard(label: 'Sent', value: '$total', icon: Icons.send_outlined, color: AppColors.white),
+            _StatCard(label: 'Posted', value: '$posted', icon: Icons.work_outline, color: AppColors.white),
             const SizedBox(width: 12),
+            _StatCard(label: 'Received', value: '$received', icon: Icons.people_outline, color: const Color(0xFF60A5FA)),
+          ]),
+          const SizedBox(height: 12),
+          Row(children: [
             _StatCard(label: 'Interviews', value: '$interviews', icon: Icons.event_outlined, color: AppColors.darkRedLight),
+            const SizedBox(width: 12),
+            _StatCard(
+              label: 'Interview Rate',
+              value: '${interviewRate.toStringAsFixed(0)}%',
+              icon: Icons.trending_up,
+              color: const Color(0xFF34D399),
+            ),
           ]),
           const SizedBox(height: 12),
           Row(children: [
             _StatCard(label: 'Accepted', value: '$accepted', icon: Icons.check_circle_outline, color: const Color(0xFF34D399)),
             const SizedBox(width: 12),
-            _StatCard(label: 'Rejected', value: '$rejected', icon: Icons.cancel_outlined, color: AppColors.textSecondary),
+            _StatCard(
+              label: 'Acceptance Rate',
+              value: received > 0 ? '${(accepted / received * 100).toStringAsFixed(0)}%' : '0%',
+              icon: Icons.star_outline,
+              color: const Color(0xFFFBBF24),
+            ),
           ]),
           const SizedBox(height: 32),
           Text('Applications by Status',

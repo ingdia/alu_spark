@@ -102,7 +102,7 @@ class AdminHomeScreen extends ConsumerWidget {
               const SizedBox(height: 24),
               statsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator(color: AppColors.darkRed)),
-                error: (_, __) => _buildPlatformStatsStatic(),
+                error: (_, _) => _buildPlatformStatsStatic(),
                 data: (stats) => _buildPlatformStatsLive(
                   students: stats.totalStudents,
                   founders: stats.totalFounders,
@@ -272,7 +272,7 @@ class AdminHomeScreen extends ConsumerWidget {
   Widget _buildRecentActivityLive(WidgetRef ref) {
     return ref.watch(_recentActivityProvider).when(
       loading: () => const Center(child: CircularProgressIndicator(color: AppColors.darkRed)),
-      error: (_, __) => GestureDetector(
+      error: (_, _) => GestureDetector(
         onTap: () => ref.invalidate(_recentActivityProvider),
         child: GlassmorphicContainer(
           blur: 10,

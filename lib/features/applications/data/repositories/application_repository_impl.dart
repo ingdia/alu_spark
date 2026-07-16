@@ -14,10 +14,9 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
   ApplicationRepositoryImpl({
     FirebaseFirestore? firestore,
     NotificationService? notifications,
-    MessageRepository? messaging,
+    this._messaging,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _notifications = notifications ?? NotificationService(),
-        _messaging = messaging;
+        _notifications = notifications ?? NotificationService();
 
   Application _fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
@@ -77,7 +76,8 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
 
   @override
   Future<void> submitApplication(Application application) async {
-    final ref = _firestore.collection(_collection).doc();
+    final ref = _firestore.collection(_collection)
+        .doc('${application.studentId}_${application.opportunityId}');
     final now = DateTime.now();
     final data = _toMap(application);
     data['createdAt'] = Timestamp.fromDate(now);

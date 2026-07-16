@@ -11,11 +11,24 @@ import 'package:alu_spark/core/widgets/loading_widget.dart';
 import 'package:alu_spark/features/messaging/domain/entities/conversation.dart';
 import 'package:alu_spark/features/messaging/presentation/providers/message_provider.dart';
 
-class ChatListScreen extends ConsumerWidget {
+class ChatListScreen extends ConsumerStatefulWidget {
   const ChatListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ChatListScreen> createState() => _ChatListScreenState();
+}
+
+class _ChatListScreenState extends ConsumerState<ChatListScreen> {
+  final _searchCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).value;
 
     return Scaffold(
@@ -37,8 +50,8 @@ class ChatListScreen extends ConsumerWidget {
           ),
         ),
         title: Text('Messages',
-            style: AppTextStyles.headingMedium
-                .copyWith(color: AppColors.white)),
+            style:
+                AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
         centerTitle: true,
       ),
       body: user == null
@@ -47,33 +60,78 @@ class ChatListScreen extends ConsumerWidget {
               title: 'Not Logged In',
               description: 'Please log in to view your messages.',
             )
-          : ref.watch(conversationsProvider(user.id)).when(
-                loading: () =>
-                    const LoadingWidget(message: 'Loading messages...'),
-                error: (e, _) =>
-                    ErrorStateWidget(message: e.toString()),
-                data: (convs) => _buildList(context, ref, convs, user.id),
-              ),
+          : Column(
+              children: [
+                _buildSearchBar(ref),
+                Expanded(child: _buildBody(context, ref, user.id)),
+              ],
+            ),
     );
   }
 
-  Widget _buildList(BuildContext context, WidgetRef ref,
-      List<Conversation> convs, String myId) {
+  Widget _buildSearchBar(WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      child: GlassmorphicContainer(
+        blur: 10,
+        borderRadius: 14,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: TextField(
+          controller: _searchCtrl,
+          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
+          decoration: InputDecoration(
+            hintText: 'Search conversations…',
+            hintStyle:
+                AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+            border: InputBorder.none,
+            icon: const Icon(Icons.search, color: AppColors.textSecondary, size: 20),
+            suffixIcon: _searchCtrl.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear,
+                        color: AppColors.textSecondary, size: 18),
+                    onPressed: () {
+                      _searchCtrl.clear();
+                      ref.read(conversationSearchQueryProvider.notifier).set('');
+                    },
+                  )
+                : null,
+          ),
+          onChanged: (v) {
+            ref.read(conversationSearchQueryProvider.notifier).set(v);
+            setState(() {}); // rebuild to show/hide clear button
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, WidgetRef ref, String userId) {
+    final filtered = ref.watch(filteredConversationsProvider(userId));
+    return filtered.when(
+      loading: () => const LoadingWidget(message: 'Loading messages...'),
+      error: (e, _) => ErrorStateWidget(message: e.toString()),
+      data: (convs) => _buildList(context, convs, userId),
+    );
+  }
+
+  Widget _buildList(
+      BuildContext context, List<Conversation> convs, String myId) {
     if (convs.isEmpty) {
-      return const EmptyStateWidget(
+      final query = ref.read(conversationSearchQueryProvider);
+      return EmptyStateWidget(
         icon: Icons.chat_bubble_outline,
-        title: 'No Conversations Yet',
-        description:
-            'Conversations open automatically when an interview is scheduled.',
+        title: query.isEmpty ? 'No Conversations Yet' : 'No Results',
+        description: query.isEmpty
+            ? 'Conversations open automatically when an interview is scheduled.'
+            : 'No conversations match "$query".',
       );
     }
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: convs.length,
-      separatorBuilder: (_, __) =>
+      separatorBuilder: (_, _) =>
           const Divider(color: AppColors.borderGlass, height: 0.5, indent: 80),
-      itemBuilder: (_, i) =>
-          _ConvTile(conv: convs[i], myId: myId),
+      itemBuilder: (_, i) => _ConvTile(conv: convs[i], myId: myId),
     );
   }
 }
@@ -103,21 +161,16 @@ class _ConvTile extends StatelessWidget {
         },
       ),
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            // Avatar
             Stack(
               children: [
                 CircleAvatar(
                   radius: 26,
-                  backgroundColor:
-                      AppColors.darkRed.withValues(alpha: 0.2),
+                  backgroundColor: AppColors.darkRed.withValues(alpha: 0.2),
                   child: Text(
-                    otherName.isNotEmpty
-                        ? otherName[0].toUpperCase()
-                        : '?',
+                    otherName.isNotEmpty ? otherName[0].toUpperCase() : '?',
                     style: AppTextStyles.headingMedium
                         .copyWith(color: AppColors.darkRed, fontSize: 18),
                   ),
@@ -132,8 +185,8 @@ class _ConvTile extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFF34D399),
                         shape: BoxShape.circle,
-                        border: Border.all(
-                            color: AppColors.darkBlue, width: 2),
+                        border:
+                            Border.all(color: AppColors.darkBlue, width: 2),
                       ),
                     ),
                   ),
@@ -217,8 +270,7 @@ class _ConvTile extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 2),
                       child: Text('Last seen ${_relativeTime(lastSeen)}',
                           style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.textSecondary,
-                              fontSize: 10)),
+                              color: AppColors.textSecondary, fontSize: 10)),
                     ),
                 ],
               ),

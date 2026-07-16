@@ -41,7 +41,7 @@ class FounderHomeScreen extends ConsumerWidget {
                 error: (e, _) => Text('$e', style: const TextStyle(color: Colors.red)),
                 data: (applications) => opportunitiesAsync.when(
                   loading: () => const SizedBox.shrink(),
-                error: (_, _e) => const SizedBox.shrink(),
+                error: (_, e) => const SizedBox.shrink(),
                   data: (opportunities) => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -126,11 +126,27 @@ class FounderHomeScreen extends ConsumerWidget {
   }
 
   Widget _buildQuickActions(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        Expanded(child: _ActionButton(title: 'Post Opportunity', icon: Icons.add_circle_outline, onTap: () => Navigator.of(context).pushNamed(RouteNames.postOpportunity))),
-        const SizedBox(width: 16),
-        Expanded(child: _ActionButton(title: 'Manage Profile', icon: Icons.business_outlined, onTap: () => Navigator.of(context).pushNamed(RouteNames.startupProfileEdit))),
+        Row(
+          children: [
+            Expanded(child: _ActionButton(title: 'Post Opportunity', icon: Icons.add_circle_outline, onTap: () => Navigator.of(context).pushNamed(RouteNames.postOpportunity))),
+            const SizedBox(width: 16),
+            Expanded(child: _ActionButton(title: 'Manage Profile', icon: Icons.business_outlined, onTap: () => Navigator.of(context).pushNamed(RouteNames.startupProfileEdit))),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _ActionButton(
+          title: 'Manage Opportunities',
+          icon: Icons.work_outline,
+          onTap: () => Navigator.of(context).pushNamed(RouteNames.opportunityManagement),
+        ),
+        const SizedBox(height: 16),
+        _ActionButton(
+          title: 'View Analytics',
+          icon: Icons.bar_chart_outlined,
+          onTap: () => Navigator.of(context).pushNamed(RouteNames.founderAnalytics),
+        ),
       ],
     );
   }

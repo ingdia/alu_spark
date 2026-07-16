@@ -17,6 +17,7 @@ class StartupModel {
   final String linkedin;
   final String stage;
   final String teamSize;
+  final String? logoUrl;
 
   StartupModel({
     required this.id,
@@ -34,6 +35,7 @@ class StartupModel {
     this.linkedin = '',
     this.stage = '',
     this.teamSize = '',
+    this.logoUrl,
   });
 
   factory StartupModel.fromFirestore(DocumentSnapshot doc) {
@@ -62,6 +64,7 @@ class StartupModel {
       linkedin: data['linkedin'] ?? '',
       stage: data['stage'] ?? '',
       teamSize: data['teamSize'] ?? '',
+      logoUrl: data['logoUrl'] as String?,
     );
   }
 
@@ -81,6 +84,7 @@ class StartupModel {
       'linkedin': linkedin,
       'stage': stage,
       'teamSize': teamSize,
+      'logoUrl': logoUrl,
     };
   }
 
@@ -101,6 +105,7 @@ class StartupModel {
       linkedin: linkedin,
       stage: stage,
       teamSize: teamSize,
+      logoUrl: logoUrl,
     );
   }
 }

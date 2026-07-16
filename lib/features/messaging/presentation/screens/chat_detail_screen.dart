@@ -337,7 +337,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen>
               style: AppTextStyles.bodyLarge
                   .copyWith(color: AppColors.white)),
           const SizedBox(height: 6),
-          Text('Messages are stored locally on this device.',
+          Text('Send the first message.',
               style: AppTextStyles.bodyMedium
                   .copyWith(color: AppColors.textSecondary, fontSize: 12)),
         ],
@@ -412,7 +412,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen>
       tween: Tween(begin: 0.4, end: 1.0),
       duration: const Duration(milliseconds: 600),
       curve: Curves.easeInOut,
-      builder: (_, v, __) => Opacity(
+      builder: (_, v, _) => Opacity(
         opacity: v,
         child: Container(
           width: 6,

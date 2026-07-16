@@ -5,6 +5,7 @@ import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/providers/repository_providers.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
+import 'package:alu_spark/core/widgets/profile_image_picker.dart';
 import 'package:alu_spark/features/student_profile/domain/entities/student.dart';
 import 'package:alu_spark/features/student_profile/presentation/providers/student_profile_provider.dart';
 
@@ -29,6 +30,7 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
   bool _loading = true;
   bool _saving = false;
   String? _uid;
+  String? _profileImageUrl;
 
   @override
   void initState() {
@@ -49,6 +51,7 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
         _skills = List.from(student.skills);
         _education = student.education.map((e) => Map<String, String>.from(e)).toList();
         _experience = student.experience.map((e) => Map<String, String>.from(e)).toList();
+        _profileImageUrl = student.profileImageUrl;
         _loading = false;
       });
     } else {
@@ -71,6 +74,7 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
         skills: _skills,
         education: _education,
         experience: _experience,
+        profileImageUrl: _profileImageUrl,
       );
       await ref.read(studentRepositoryProvider).saveStudent(student);
       ref.invalidate(studentProfileProvider(_uid!));
@@ -146,6 +150,36 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Profile image picker
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 28),
+                child: ProfileImagePicker(
+                  currentImageUrl: _profileImageUrl,
+                  initials: _nameController.text.isNotEmpty
+                      ? _nameController.text[0].toUpperCase()
+                      : '?',
+                  onUrlSaved: (url) async {
+                    setState(() => _profileImageUrl = url);
+                    if (_uid != null) {
+                      await ref
+                          .read(studentRepositoryProvider)
+                          .updateProfileImageUrl(_uid!, url);
+                      ref.invalidate(studentProfileProvider(_uid!));
+                    }
+                  },
+                  onRemoved: () async {
+                    setState(() => _profileImageUrl = null);
+                    if (_uid != null) {
+                      await ref
+                          .read(studentRepositoryProvider)
+                          .updateProfileImageUrl(_uid!, null);
+                      ref.invalidate(studentProfileProvider(_uid!));
+                    }
+                  },
+                ),
+              ),
+            ),
             _sectionTitle('Basic Information'),
             const SizedBox(height: 16),
             _glassField(_nameController, 'Full Name', Icons.person_outline),

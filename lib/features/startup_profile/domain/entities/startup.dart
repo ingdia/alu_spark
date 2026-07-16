@@ -14,6 +14,7 @@ class Startup {
   final String linkedin;
   final String stage;
   final String teamSize;
+  final String? logoUrl;
 
   Startup({
     required this.id,
@@ -31,5 +32,6 @@ class Startup {
     this.linkedin = '',
     this.stage = '',
     this.teamSize = '',
+    this.logoUrl,
   });
 }

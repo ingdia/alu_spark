@@ -5,6 +5,7 @@ import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/providers/repository_providers.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
+import 'package:alu_spark/core/widgets/profile_image_picker.dart';
 import 'package:alu_spark/features/startup_profile/domain/entities/startup.dart';
 import 'package:alu_spark/features/startup_profile/presentation/providers/startup_provider.dart';
 
@@ -36,7 +37,8 @@ class _StartupProfileEditScreenState
 
   bool _loading = true;
   bool _saving = false;
-  Startup? _original; // keep immutable fields (id, founderId, etc.)
+  Startup? _original;
+  String? _logoUrl;
 
   @override
   void initState() {
@@ -77,6 +79,7 @@ class _StartupProfileEditScreenState
       _descriptionController.text = startup.description;
       _teamMembers =
           startup.teamMembers.map((m) => Map<String, String>.from(m)).toList();
+      _logoUrl = startup.logoUrl;
     }
     setState(() => _loading = false);
   }
@@ -103,6 +106,7 @@ class _StartupProfileEditScreenState
         linkedin: _linkedinController.text.trim(),
         stage: _original!.stage,
         teamSize: _original!.teamSize,
+        logoUrl: _logoUrl,
       );
 
       await ref.read(startupRepositoryProvider).updateStartup(updated);
@@ -203,6 +207,37 @@ class _StartupProfileEditScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Logo picker
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 28),
+                  child: ProfileImagePicker(
+                    currentImageUrl: _logoUrl,
+                    initials: _nameController.text.isNotEmpty
+                        ? _nameController.text[0].toUpperCase()
+                        : '?',
+                    radius: 44,
+                    onUrlSaved: (url) async {
+                      setState(() => _logoUrl = url);
+                      if (_original != null) {
+                        await ref
+                            .read(startupRepositoryProvider)
+                            .updateLogoUrl(_original!.id, url);
+                        ref.invalidate(startupDetailProvider(_original!.id));
+                      }
+                    },
+                    onRemoved: () async {
+                      setState(() => _logoUrl = null);
+                      if (_original != null) {
+                        await ref
+                            .read(startupRepositoryProvider)
+                            .updateLogoUrl(_original!.id, null);
+                        ref.invalidate(startupDetailProvider(_original!.id));
+                      }
+                    },
+                  ),
+                ),
+              ),
               _sectionTitle('Basic Information'),
               const SizedBox(height: 16),
               _glassField(

@@ -49,6 +49,7 @@ class StartupRepositoryImpl implements StartupRepository {
       openRolesCount: startup.openRolesCount,
       isVerified: startup.isVerified,
       createdAt: startup.createdAt,
+      logoUrl: startup.logoUrl,
     );
     await _firestore.collection(_collectionPath).doc(startup.id).set(model.toFirestore());
   }
@@ -67,6 +68,7 @@ class StartupRepositoryImpl implements StartupRepository {
       openRolesCount: startup.openRolesCount,
       isVerified: startup.isVerified,
       createdAt: startup.createdAt,
+      logoUrl: startup.logoUrl,
     );
     await _firestore.collection(_collectionPath).doc(startup.id).update(model.toFirestore());
   }
@@ -75,6 +77,13 @@ class StartupRepositoryImpl implements StartupRepository {
   Future<void> verifyStartup(String startupId, bool isVerified) async {
     await _firestore.collection(_collectionPath).doc(startupId).update({
       'isVerified': isVerified,
+    });
+  }
+
+  @override
+  Future<void> updateLogoUrl(String startupId, String? logoUrl) async {
+    await _firestore.collection(_collectionPath).doc(startupId).update({
+      'logoUrl': logoUrl,
     });
   }
 }
