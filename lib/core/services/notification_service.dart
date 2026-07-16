@@ -156,6 +156,23 @@ class NotificationService {
     }
   }
 
+  /// Opportunity archived → notify all applicants.
+  Future<void> notifyOpportunityArchived({
+    required List<String> studentIds,
+    required String opportunityTitle,
+    String? opportunityId,
+  }) async {
+    for (final id in studentIds) {
+      await _create(
+        userId: id,
+        title: 'Opportunity No Longer Available',
+        body: 'The opportunity "$opportunityTitle" has been archived.',
+        type: 'system',
+        relatedId: opportunityId,
+      );
+    }
+  }
+
   // ── Messaging ─────────────────────────────────────────────────────────────
 
   Future<void> notifyNewMessage({

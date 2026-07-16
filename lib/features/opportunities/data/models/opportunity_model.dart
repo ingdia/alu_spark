@@ -17,6 +17,7 @@ class OpportunityModel {
   final DateTime? deadline;
   final bool isActive;
   final int applicationsCount;
+  final OpportunityStatus status;
 
   OpportunityModel({
     required this.id,
@@ -34,10 +35,39 @@ class OpportunityModel {
     this.deadline,
     this.isActive = true,
     this.applicationsCount = 0,
+    this.status = OpportunityStatus.active,
   });
+
+  static OpportunityStatus _statusFromString(String? s) {
+    switch (s) {
+      case 'closed':
+        return OpportunityStatus.closed;
+      case 'archived':
+        return OpportunityStatus.archived;
+      default:
+        return OpportunityStatus.active;
+    }
+  }
+
+  static String _statusToString(OpportunityStatus s) {
+    switch (s) {
+      case OpportunityStatus.closed:
+        return 'closed';
+      case OpportunityStatus.archived:
+        return 'archived';
+      case OpportunityStatus.active:
+        return 'active';
+    }
+  }
 
   factory OpportunityModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    final statusStr = data['status'] as String?;
+    // Legacy: if no status field, derive from isActive
+    final isActive = data['isActive'] as bool? ?? true;
+    final status = statusStr != null
+        ? _statusFromString(statusStr)
+        : (isActive ? OpportunityStatus.active : OpportunityStatus.closed);
     return OpportunityModel(
       id: doc.id,
       title: data['title'] ?? '',
@@ -51,9 +81,12 @@ class OpportunityModel {
       requirements: List<String>.from(data['requirements'] ?? []),
       benefits: List<String>.from(data['benefits'] ?? []),
       createdAt: (data['createdAt'] as Timestamp).toDate(),
-      deadline: data['deadline'] != null ? (data['deadline'] as Timestamp).toDate() : null,
-      isActive: data['isActive'] ?? true,
+      deadline: data['deadline'] != null
+          ? (data['deadline'] as Timestamp).toDate()
+          : null,
+      isActive: isActive,
       applicationsCount: data['applicationsCount'] ?? 0,
+      status: status,
     );
   }
 
@@ -70,8 +103,9 @@ class OpportunityModel {
         'benefits': benefits,
         'createdAt': Timestamp.fromDate(createdAt),
         'deadline': deadline != null ? Timestamp.fromDate(deadline!) : null,
-        'isActive': isActive,
+        'isActive': status == OpportunityStatus.active,
         'applicationsCount': applicationsCount,
+        'status': _statusToString(status),
       };
 
   Opportunity toEntity() => Opportunity(
@@ -90,5 +124,6 @@ class OpportunityModel {
         deadline: deadline,
         isActive: isActive,
         applicationsCount: applicationsCount,
+        status: status,
       );
 }

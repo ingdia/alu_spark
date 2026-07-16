@@ -13,6 +13,7 @@ import 'package:alu_spark/features/opportunities/presentation/screens/discover_s
 import 'package:alu_spark/features/opportunities/presentation/screens/search_screen.dart';
 import 'package:alu_spark/features/opportunities/presentation/screens/opportunity_detail_screen.dart';
 import 'package:alu_spark/features/opportunities/presentation/screens/post_opportunity_screen.dart';
+import 'package:alu_spark/features/opportunities/presentation/screens/edit_opportunity_screen.dart';
 import 'package:alu_spark/features/student_profile/presentation/screens/student_profile_screen.dart';
 import 'package:alu_spark/features/student_profile/presentation/screens/student_profile_edit_screen.dart';
 import 'package:alu_spark/features/startup_profile/presentation/screens/startup_profile_screen.dart';
@@ -50,6 +51,7 @@ class RouteNames {
   static const String discover = '/discover';
   static const String search = '/search';
   static const String postOpportunity = '/post-opportunity';
+  static const String editOpportunity = '/edit-opportunity';
   static const String opportunityDetail = '/opportunity-detail';
   static const String studentProfile = '/student-profile';
   static const String studentProfileEdit = '/student-profile-edit';
@@ -94,6 +96,9 @@ class AppRouter {
       case RouteNames.discover: return MaterialPageRoute(builder: (_) => const DiscoverScreen());
       case RouteNames.search: return MaterialPageRoute(builder: (_) => const SearchScreen());
       case RouteNames.postOpportunity: return MaterialPageRoute(builder: (_) => const PostOpportunityScreen());
+      case RouteNames.editOpportunity:
+        final opportunity = settings.arguments as Opportunity;
+        return MaterialPageRoute(builder: (_) => EditOpportunityScreen(opportunity: opportunity));
       
       case RouteNames.opportunityDetail:
         final opportunity = settings.arguments as Opportunity;

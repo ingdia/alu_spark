@@ -5,39 +5,55 @@ import 'package:alu_spark/features/opportunities/domain/repositories/opportunity
 
 class OpportunityRepositoryImpl implements OpportunityRepository {
   final FirebaseFirestore _firestore;
-  static const _collection = 'opportunities';
+  static const _col = 'opportunities';
+  static const _appCol = 'applications';
 
   OpportunityRepositoryImpl({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
+  List<Opportunity> _sorted(List<Opportunity> l) =>
+      l..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
   @override
   Stream<List<Opportunity>> getOpportunities() {
     return _firestore
-        .collection(_collection)
+        .collection(_col)
         .where('isActive', isEqualTo: true)
         .snapshots()
-        .map((s) { final l = s.docs.map((d) => OpportunityModel.fromFirestore(d).toEntity()).toList(); l.sort((a,b) => b.createdAt.compareTo(a.createdAt)); return l; });
+        .map((s) => _sorted(
+            s.docs.map((d) => OpportunityModel.fromFirestore(d).toEntity()).toList()));
   }
 
   @override
   Stream<List<Opportunity>> getOpportunitiesByCategory(String category) {
     return _firestore
-        .collection(_collection)
+        .collection(_col)
         .where('isActive', isEqualTo: true)
         .where('category', isEqualTo: category)
         .snapshots()
-        .map((s) { final l = s.docs.map((d) => OpportunityModel.fromFirestore(d).toEntity()).toList(); l.sort((a,b) => b.createdAt.compareTo(a.createdAt)); return l; });
+        .map((s) => _sorted(
+            s.docs.map((d) => OpportunityModel.fromFirestore(d).toEntity()).toList()));
   }
 
   @override
   Future<Opportunity?> getOpportunityById(String id) async {
-    final doc = await _firestore.collection(_collection).doc(id).get();
+    final doc = await _firestore.collection(_col).doc(id).get();
     return doc.exists ? OpportunityModel.fromFirestore(doc).toEntity() : null;
   }
 
   @override
+  Stream<List<Opportunity>> getOpportunitiesByStartupAll(String startupId) {
+    return _firestore
+        .collection(_col)
+        .where('startupId', isEqualTo: startupId)
+        .snapshots()
+        .map((s) => _sorted(
+            s.docs.map((d) => OpportunityModel.fromFirestore(d).toEntity()).toList()));
+  }
+
+  @override
   Future<String> createOpportunity(Opportunity opportunity) async {
-    final ref = _firestore.collection(_collection).doc();
+    final ref = _firestore.collection(_col).doc();
     final model = OpportunityModel(
       id: ref.id,
       title: opportunity.title,
@@ -54,6 +70,7 @@ class OpportunityRepositoryImpl implements OpportunityRepository {
       deadline: opportunity.deadline,
       isActive: true,
       applicationsCount: 0,
+      status: OpportunityStatus.active,
     );
     await ref.set(model.toFirestore());
     return ref.id;
@@ -75,22 +92,52 @@ class OpportunityRepositoryImpl implements OpportunityRepository {
       benefits: opportunity.benefits,
       createdAt: opportunity.createdAt,
       deadline: opportunity.deadline,
-      isActive: opportunity.isActive,
+      isActive: opportunity.status == OpportunityStatus.active,
       applicationsCount: opportunity.applicationsCount,
+      status: opportunity.status,
     );
-    await _firestore.collection(_collection).doc(opportunity.id).update(model.toFirestore());
+    await _firestore.collection(_col).doc(opportunity.id).update(model.toFirestore());
+  }
+
+  @override
+  Future<void> closeOpportunity(String id) async {
+    await _firestore.collection(_col).doc(id).update({
+      'status': 'closed',
+      'isActive': false,
+    });
+  }
+
+  @override
+  Future<void> archiveOpportunity(String id) async {
+    await _firestore.collection(_col).doc(id).update({
+      'status': 'archived',
+      'isActive': false,
+    });
   }
 
   @override
   Future<void> deleteOpportunity(String id) async {
-    await _firestore.collection(_collection).doc(id).update({'isActive': false});
+    await _firestore.collection(_col).doc(id).delete();
   }
 
   @override
   Future<void> incrementApplicationCount(String opportunityId) async {
     await _firestore
-        .collection(_collection)
+        .collection(_col)
         .doc(opportunityId)
         .update({'applicationsCount': FieldValue.increment(1)});
+  }
+
+  @override
+  Future<List<String>> getApplicantIds(String opportunityId) async {
+    final snap = await _firestore
+        .collection(_appCol)
+        .where('opportunityId', isEqualTo: opportunityId)
+        .get();
+    return snap.docs
+        .map((d) => (d.data()['studentId'] as String?) ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
   }
 }
