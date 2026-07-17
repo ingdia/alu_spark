@@ -10,6 +10,7 @@ import 'package:alu_spark/core/widgets/error_state_widget.dart';
 import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/features/messaging/presentation/providers/message_provider.dart';
 import 'package:alu_spark/features/messaging/domain/entities/conversation.dart';
+import 'package:alu_spark/features/messaging/presentation/screens/rooms_screen.dart';
 
 class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
@@ -18,17 +19,27 @@ class MessagesScreen extends ConsumerStatefulWidget {
   ConsumerState<MessagesScreen> createState() => _MessagesScreenState();
 }
 
-class _MessagesScreenState extends ConsumerState<MessagesScreen> {
+class _MessagesScreenState extends ConsumerState<MessagesScreen>
+    with SingleTickerProviderStateMixin {
   final _searchCtrl = TextEditingController();
+  TabController? _tabCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabCtrl = TabController(length: 2, vsync: this);
+  }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _tabCtrl?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_tabCtrl == null) return const SizedBox.shrink();
     final authState = ref.watch(authStateProvider);
 
     return Scaffold(
@@ -43,15 +54,39 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                   style: AppTextStyles.headingLarge
                       .copyWith(color: AppColors.white)),
             ),
+            const SizedBox(height: 12),
+            // Tab bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                'Connect with founders and students',
-                style: AppTextStyles.bodyMedium
-                    .copyWith(color: AppColors.textSecondary, fontSize: 13),
+              child: Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.glassWhite,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderGlass),
+                ),
+                child: TabBar(
+                  controller: _tabCtrl!,
+                  indicator: BoxDecoration(
+                    color: AppColors.darkRed,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  dividerColor: Colors.transparent,
+                  labelStyle: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w600, fontSize: 13),
+                  unselectedLabelStyle:
+                      AppTextStyles.bodyMedium.copyWith(fontSize: 13),
+                  labelColor: AppColors.white,
+                  unselectedLabelColor: AppColors.textSecondary,
+                  tabs: const [
+                    Tab(text: 'Direct Messages'),
+                    Tab(text: 'Rooms'),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Expanded(
               child: authState.when(
                 loading: () => const LoadingWidget(),
@@ -65,10 +100,18 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                       description: 'Please log in to view your messages.',
                     );
                   }
-                  return Column(
+                  return TabBarView(
+                    controller: _tabCtrl!,
                     children: [
-                      _buildSearchBar(),
-                      Expanded(child: _buildBody(context, user.id)),
+                      // ── DMs tab ──
+                      Column(
+                        children: [
+                          _buildSearchBar(),
+                          Expanded(child: _buildBody(context, user.id)),
+                        ],
+                      ),
+                      // ── Rooms tab ──
+                      const RoomsScreen(),
                     ],
                   );
                 },

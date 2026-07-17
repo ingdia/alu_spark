@@ -5,6 +5,7 @@ abstract class ApplicationRepository {
   Future<void> submitApplication(Application application);
   Stream<List<Application>> getApplicationsByStudent(String studentId);
   Stream<List<Application>> getApplicationsByStartup(String startupId);
+  Stream<Application?> getApplicationById(String applicationId);
   Future<bool> hasApplied(String studentId, String opportunityId);
   Stream<Application?> getApplicationForOpportunity(String studentId, String opportunityId);
   Future<void> withdrawApplication(String applicationId);

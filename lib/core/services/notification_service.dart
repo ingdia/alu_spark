@@ -18,7 +18,11 @@ class NotificationService {
     String? relatedId,
   }) async {
     try {
-      await _firestore.collection(_col).add({
+      await _firestore
+          .collection(_col)
+          .doc(userId)
+          .collection('items')
+          .add({
         'userId': userId,
         'title': title,
         'description': body,

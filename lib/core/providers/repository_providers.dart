@@ -19,6 +19,8 @@ import 'package:alu_spark/features/bookmarks/data/repositories/bookmark_reposito
 import 'package:alu_spark/features/bookmarks/domain/repositories/bookmark_repository.dart';
 import 'package:alu_spark/core/services/notification_service.dart';
 import 'package:alu_spark/core/services/messaging_service.dart';
+import 'package:alu_spark/features/messaging/data/repositories/room_repository_impl.dart';
+import 'package:alu_spark/features/messaging/domain/repositories/room_repository.dart';
 
 final opportunityRepositoryProvider = Provider<OpportunityRepository>((ref) => OpportunityRepositoryImpl());
 final notificationServiceProvider = Provider<NotificationService>((ref) => NotificationService());
@@ -38,3 +40,5 @@ final studentRepositoryProvider = Provider<StudentRepository>((ref) => StudentRe
 final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
   return BookmarkRepositoryImpl();
 });
+
+final roomRepositoryProvider = Provider<RoomRepository>((ref) => RoomRepositoryImpl());

@@ -27,6 +27,14 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
   List<Map<String, String>> _education = [];
   List<Map<String, String>> _experience = [];
 
+  // Persistent controllers for list editors — keyed by "edu_i_key" / "exp_i_key"
+  final Map<String, TextEditingController> _listControllers = {};
+
+  TextEditingController _listCtrl(String prefix, int index, String key, String initialValue) {
+    final id = '${prefix}_${index}_$key';
+    return _listControllers.putIfAbsent(id, () => TextEditingController(text: initialValue));
+  }
+
   bool _loading = true;
   bool _saving = false;
   String? _uid;
@@ -97,6 +105,9 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
     _universityController.dispose();
     _bioController.dispose();
     _skillInputController.dispose();
+    for (final c in _listControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -199,22 +210,30 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
             _sectionTitle('Education'),
             const SizedBox(height: 16),
             _buildListEditor(
+              prefix: 'edu',
               items: _education,
               titleKey: 'degree',
               subtitleKey: 'institution',
               onAdd: () => setState(() => _education.add({'degree': '', 'institution': '', 'period': ''})),
-              onRemove: (i) => setState(() => _education.removeAt(i)),
+              onRemove: (i) => setState(() {
+                _education.removeAt(i);
+                _listControllers.removeWhere((k, _) => k.startsWith('edu_$i'));
+              }),
               addLabel: 'Add Education',
             ),
             const SizedBox(height: 28),
             _sectionTitle('Experience'),
             const SizedBox(height: 16),
             _buildListEditor(
+              prefix: 'exp',
               items: _experience,
               titleKey: 'role',
               subtitleKey: 'company',
               onAdd: () => setState(() => _experience.add({'role': '', 'company': '', 'period': ''})),
-              onRemove: (i) => setState(() => _experience.removeAt(i)),
+              onRemove: (i) => setState(() {
+                _experience.removeAt(i);
+                _listControllers.removeWhere((k, _) => k.startsWith('exp_$i'));
+              }),
               addLabel: 'Add Experience',
             ),
             const SizedBox(height: 40),
@@ -327,6 +346,7 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
   }
 
   Widget _buildListEditor({
+    required String prefix,
     required List<Map<String, String>> items,
     required String titleKey,
     required String subtitleKey,
@@ -347,13 +367,13 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
               padding: const EdgeInsets.all(14),
               child: Column(
                 children: [
-                  _inlineField(item, titleKey, titleKey == 'degree' ? 'Degree / Certificate' : 'Role / Position'),
+                  _inlineField(prefix, i, item, titleKey, titleKey == 'degree' ? 'Degree / Certificate' : 'Role / Position'),
                   const SizedBox(height: 8),
-                  _inlineField(item, subtitleKey, subtitleKey == 'institution' ? 'Institution' : 'Company'),
+                  _inlineField(prefix, i, item, subtitleKey, subtitleKey == 'institution' ? 'Institution' : 'Company'),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Expanded(child: _inlineField(item, 'period', 'Period (e.g. 2023 - 2025)')),
+                      Expanded(child: _inlineField(prefix, i, item, 'period', 'Period (e.g. 2023 - 2025)')),
                       IconButton(
                         icon: const Icon(Icons.delete_outline, color: AppColors.darkRed, size: 20),
                         onPressed: () => onRemove(i),
@@ -382,10 +402,10 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
     );
   }
 
-  Widget _inlineField(Map<String, String> map, String key, String hint) {
+  Widget _inlineField(String prefix, int index, Map<String, String> map, String key, String hint) {
+    final controller = _listCtrl(prefix, index, key, map[key] ?? '');
     return TextField(
-      controller: TextEditingController(text: map[key])
-        ..addListener(() {}),
+      controller: controller,
       style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white, fontSize: 13),
       decoration: InputDecoration(
         hintText: hint,

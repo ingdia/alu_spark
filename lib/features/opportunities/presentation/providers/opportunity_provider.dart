@@ -18,7 +18,8 @@ final recentOpportunitiesProvider = StreamProvider.autoDispose<List<Opportunity>
 final opportunitiesByStartupProvider =
     StreamProvider.autoDispose.family<List<Opportunity>, String>((ref, startupId) {
   final repo = ref.watch(opportunityRepositoryProvider);
-  return repo.getOpportunities().map((list) => list.where((o) => o.startupId == startupId).toList());
+  return repo.getOpportunitiesByStartupAll(startupId)
+      .map((list) => list.where((o) => o.status == OpportunityStatus.active).toList());
 });
 
 /// All opportunities for a startup regardless of status (for founder management).

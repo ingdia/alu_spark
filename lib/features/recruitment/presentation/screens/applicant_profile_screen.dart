@@ -5,7 +5,9 @@ import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/providers/repository_providers.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/core/widgets/loading_widget.dart';
+import 'package:alu_spark/core/widgets/error_state_widget.dart';
 import 'package:alu_spark/features/applications/domain/entities/application.dart';
+import 'package:alu_spark/features/applications/presentation/providers/application_provider.dart';
 import 'package:alu_spark/features/student_profile/presentation/providers/student_profile_provider.dart';
 import 'package:alu_spark/shared/enums/application_status.dart';
 
@@ -27,18 +29,26 @@ class _ApplicantProfileScreenState
   final _notesController = TextEditingController();
   DateTime? _interviewDate;
   bool _saving = false;
+  bool _interviewPrefilled = false;
 
+  // Use the passed application only as the initial/fallback value.
+  // The live stream (applicationByIdProvider) is the source of truth.
   Application get app => widget.application;
 
   @override
   void initState() {
     super.initState();
-    // Pre-fill if interview already scheduled
-    _timeController.text = app.interviewTime ?? '';
-    _locationController.text = app.interviewLocation ?? '';
-    _linkController.text = app.meetingLink ?? '';
-    _notesController.text = app.interviewNotes ?? '';
-    _interviewDate = app.interviewDate;
+    _prefillInterview(app);
+  }
+
+  void _prefillInterview(Application a) {
+    if (_interviewPrefilled) return;
+    _interviewPrefilled = true;
+    _timeController.text = a.interviewTime ?? '';
+    _locationController.text = a.interviewLocation ?? '';
+    _linkController.text = a.meetingLink ?? '';
+    _notesController.text = a.interviewNotes ?? '';
+    _interviewDate = a.interviewDate;
   }
 
   @override
@@ -89,12 +99,15 @@ class _ApplicantProfileScreenState
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
         ));
-        Navigator.of(context).pop();
+        // Don't pop — the stream will update the UI automatically.
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')));
+            SnackBar(
+              content: Text('Error: ${e.toString().replaceFirst('Exception: ', '')}'),
+              backgroundColor: AppColors.darkRed,
+            ));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -132,7 +145,7 @@ class _ApplicantProfileScreenState
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
         ));
-        Navigator.of(context).pop();
+        // Don't pop — the stream will update the UI automatically.
       }
     } catch (e) {
       if (mounted) {
@@ -146,7 +159,9 @@ class _ApplicantProfileScreenState
 
   @override
   Widget build(BuildContext context) {
-    final studentAsync = ref.watch(studentProfileProvider(app.studentId));
+    final liveAppAsync = ref.watch(applicationByIdProvider(app.id));
+    final liveApp = liveAppAsync.asData?.value ?? app;
+    final studentAsync = ref.watch(studentProfileProvider(liveApp.studentId));
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
@@ -171,21 +186,25 @@ class _ApplicantProfileScreenState
                 AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
         centerTitle: true,
       ),
-      body: studentAsync.when(
-        loading: () => const LoadingWidget(message: 'Loading profile...'),
-        error: (_, e) => _buildBody(context, null),
-        data: (student) => _buildBody(context, student),
+      body: liveAppAsync.when(
+        loading: () => const LoadingWidget(message: 'Loading...'),
+        error: (e, _) => ErrorStateWidget(message: e.toString()),
+        data: (_) => studentAsync.when(
+          loading: () => const LoadingWidget(message: 'Loading profile...'),
+          error: (_, __) => _buildBody(context, liveApp, null),
+          data: (student) => _buildBody(context, liveApp, student),
+        ),
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, dynamic student) {
+  Widget _buildBody(BuildContext context, Application liveApp, dynamic student) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(student),
+          _buildHeader(liveApp, student),
           const SizedBox(height: 20),
           if (student != null) ...[
             if ((student.bio as String).isNotEmpty) ...[
@@ -224,34 +243,34 @@ class _ApplicantProfileScreenState
           ],
           _sectionLabel('Application Details'),
           const SizedBox(height: 8),
-          _buildApplicationDetails(),
+          _buildApplicationDetails(liveApp),
           const SizedBox(height: 20),
           _sectionLabel('Motivation Letter'),
           const SizedBox(height: 8),
-          _buildMotivation(),
-          if (app.cvUrl.isNotEmpty) ...[
+          _buildMotivation(liveApp),
+          if (liveApp.cvUrl.isNotEmpty) ...[
             const SizedBox(height: 20),
             _sectionLabel('CV / Resume'),
             const SizedBox(height: 8),
-            _buildCvLink(),
+            _buildCvLink(liveApp),
           ],
           const SizedBox(height: 20),
           _sectionLabel('Update Status'),
           const SizedBox(height: 8),
-          _buildStatusActions(),
+          _buildStatusActions(liveApp),
           const SizedBox(height: 20),
           _sectionLabel('Schedule / Update Interview'),
           const SizedBox(height: 8),
-          _buildInterviewForm(),
+          _buildInterviewForm(liveApp),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(dynamic student) {
-    final statusColor = _statusColor(app.status);
-    final initials = app.studentName.isNotEmpty
-        ? app.studentName.trim().split(' ').map((w) => w[0]).take(2).join()
+  Widget _buildHeader(Application liveApp, dynamic student) {
+    final statusColor = _statusColor(liveApp.status);
+    final initials = liveApp.studentName.isNotEmpty
+        ? liveApp.studentName.trim().split(' ').map((w) => w[0]).take(2).join()
         : '?';
     final photoUrl = student?.profileImageUrl as String?;
 
@@ -279,11 +298,11 @@ class _ApplicantProfileScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(app.studentName,
+                Text(liveApp.studentName,
                     style: AppTextStyles.headingMedium
                         .copyWith(color: AppColors.white, fontSize: 18)),
                 const SizedBox(height: 4),
-                Text(app.studentEmail,
+                Text(liveApp.studentEmail,
                     style: AppTextStyles.bodyMedium
                         .copyWith(color: AppColors.textSecondary, fontSize: 12),
                     overflow: TextOverflow.ellipsis),
@@ -313,7 +332,7 @@ class _ApplicantProfileScreenState
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: statusColor.withValues(alpha: 0.4)),
             ),
-            child: Text(app.status.displayName,
+            child: Text(liveApp.status.displayName,
                 style: AppTextStyles.bodyMedium.copyWith(
                     color: statusColor,
                     fontSize: 11,
@@ -394,22 +413,20 @@ class _ApplicantProfileScreenState
     );
   }
 
-  Widget _buildApplicationDetails() {
+  Widget _buildApplicationDetails(Application liveApp) {
     return GlassmorphicContainer(
       blur: 10,
       borderRadius: 14,
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _detailRow(Icons.work_outline, 'Role', app.opportunityTitle),
+          _detailRow(Icons.work_outline, 'Role', liveApp.opportunityTitle),
           const SizedBox(height: 10),
-          _detailRow(Icons.business_outlined, 'Startup', app.startupName),
+          _detailRow(Icons.business_outlined, 'Startup', liveApp.startupName),
           const SizedBox(height: 10),
-          _detailRow(Icons.calendar_today_outlined, 'Applied',
-              _fmt(app.createdAt)),
+          _detailRow(Icons.calendar_today_outlined, 'Applied', _fmt(liveApp.createdAt)),
           const SizedBox(height: 10),
-          _detailRow(Icons.update_outlined, 'Last Updated',
-              _fmt(app.updatedAt)),
+          _detailRow(Icons.update_outlined, 'Last Updated', _fmt(liveApp.updatedAt)),
         ],
       ),
     );
@@ -433,14 +450,14 @@ class _ApplicantProfileScreenState
     );
   }
 
-  Widget _buildMotivation() {
+  Widget _buildMotivation(Application liveApp) {
     return GlassmorphicContainer(
       blur: 10,
       borderRadius: 14,
       padding: const EdgeInsets.all(16),
       child: Text(
-        app.motivation.isNotEmpty
-            ? app.motivation
+        liveApp.motivation.isNotEmpty
+            ? liveApp.motivation
             : 'No motivation letter provided.',
         style: AppTextStyles.bodyMedium
             .copyWith(color: AppColors.textSecondary, height: 1.6),
@@ -448,7 +465,7 @@ class _ApplicantProfileScreenState
     );
   }
 
-  Widget _buildCvLink() {
+  Widget _buildCvLink(Application liveApp) {
     return GlassmorphicContainer(
       blur: 10,
       borderRadius: 14,
@@ -466,7 +483,7 @@ class _ApplicantProfileScreenState
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(app.cvUrl,
+            child: Text(liveApp.cvUrl,
                 style: AppTextStyles.bodyMedium
                     .copyWith(color: AppColors.white, fontSize: 12),
                 overflow: TextOverflow.ellipsis),
@@ -478,8 +495,8 @@ class _ApplicantProfileScreenState
     );
   }
 
-  Widget _buildStatusActions() {
-    final validNext = app.status.validTransitions
+  Widget _buildStatusActions(Application liveApp) {
+    final validNext = liveApp.status.validTransitions
         .where((s) => s != ApplicationStatus.withdrawn)
         .toList();
 
@@ -519,7 +536,11 @@ class _ApplicantProfileScreenState
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(_statusIcon(next), color: color, size: 16),
+                if (_saving)
+                  const SizedBox(width: 14, height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white))
+                else
+                  Icon(_statusIcon(next), color: color, size: 16),
                 const SizedBox(width: 6),
                 Text('Mark ${next.displayName}',
                     style: AppTextStyles.bodyMedium.copyWith(
@@ -547,7 +568,7 @@ class _ApplicantProfileScreenState
     }
   }
 
-  Widget _buildInterviewForm() {
+  Widget _buildInterviewForm(Application liveApp) {
     return GlassmorphicContainer(
       blur: 10,
       borderRadius: 16,
@@ -636,7 +657,7 @@ class _ApplicantProfileScreenState
                       child: CircularProgressIndicator(
                           color: AppColors.white, strokeWidth: 2))
                   : Text(
-                      app.status == ApplicationStatus.interview
+                      liveApp.status == ApplicationStatus.interview
                           ? 'Update Interview'
                           : 'Schedule Interview',
                       style: AppTextStyles.bodyLarge

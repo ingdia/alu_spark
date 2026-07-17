@@ -29,6 +29,7 @@ import 'package:alu_spark/features/admin_user_management/presentation/screens/ad
 import 'package:alu_spark/features/admin_analytics/presentation/screens/admin_analytics_screen.dart';
 import 'package:alu_spark/features/messaging/presentation/screens/chat_list_screen.dart';
 import 'package:alu_spark/features/messaging/presentation/screens/chat_detail_screen.dart';
+import 'package:alu_spark/features/messaging/presentation/screens/room_detail_screen.dart';
 import 'package:alu_spark/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:alu_spark/features/bookmarks/presentation/screens/bookmarks_screen.dart';
 import 'package:alu_spark/features/auth/presentation/screens/role_selection_screen.dart';
@@ -78,6 +79,7 @@ class RouteNames {
   static const String applicantProfile = '/applicant-profile';
   static const String analytics = '/analytics';
   static const String founderAnalytics = '/founder-analytics';
+  static const String roomDetail = '/room-detail';
   static const String settings = '/settings';
 }
 
@@ -148,6 +150,11 @@ class AppRouter {
       case RouteNames.analytics: return MaterialPageRoute(builder: (_) => const AnalyticsScreen());
       case RouteNames.founderAnalytics: return MaterialPageRoute(builder: (_) => const FounderAnalyticsScreen());
       case RouteNames.settings: return MaterialPageRoute(builder: (_) => const SettingsScreen());
+
+      case RouteNames.roomDetail:
+        final roomId = settings.arguments as String;
+        return MaterialPageRoute(
+            builder: (_) => RoomDetailScreen(roomId: roomId));
 
       default:
         return MaterialPageRoute(

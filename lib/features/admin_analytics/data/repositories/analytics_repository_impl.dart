@@ -14,33 +14,35 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     final oppsCol = _firestore.collection('opportunities');
     final appsCol = _firestore.collection('applications');
 
-    // Parallel aggregation counts
-    final results = await Future.wait([
+    const appStatuses = ['applied', 'under_review', 'interview', 'accepted', 'rejected', 'withdrawn'];
+    const oppCategories = ['Technology', 'Business', 'Design', 'Marketing', 'Finance', 'Other'];
+
+    final countQueries = [
       usersCol.where('role', isEqualTo: 'student').count().get(),
       usersCol.where('role', isEqualTo: 'founder').count().get(),
       oppsCol.count().get(),
       appsCol.count().get(),
-    ]);
+      ...appStatuses.map((s) => appsCol.where('status', isEqualTo: s).count().get()),
+      ...oppCategories.map((c) => oppsCol.where('category', isEqualTo: c).count().get()),
+    ];
+
+    final results = await Future.wait(countQueries);
 
     final totalStudents = results[0].count ?? 0;
     final totalFounders = results[1].count ?? 0;
     final totalOpportunities = results[2].count ?? 0;
     final totalApplications = results[3].count ?? 0;
 
-    // Applications by status — fetch only the status field
-    final appsSnap = await appsCol.get();
     final Map<String, int> appsByStatus = {};
-    for (final doc in appsSnap.docs) {
-      final status = (doc.data()['status'] as String?) ?? 'applied';
-      appsByStatus[status] = (appsByStatus[status] ?? 0) + 1;
+    for (var i = 0; i < appStatuses.length; i++) {
+      final count = results[4 + i].count ?? 0;
+      if (count > 0) appsByStatus[appStatuses[i]] = count;
     }
 
-    // Opportunities by category — fetch only the category field
-    final oppsSnap = await oppsCol.get();
     final Map<String, int> oppsByCategory = {};
-    for (final doc in oppsSnap.docs) {
-      final category = (doc.data()['category'] as String?) ?? 'Other';
-      oppsByCategory[category] = (oppsByCategory[category] ?? 0) + 1;
+    for (var i = 0; i < oppCategories.length; i++) {
+      final count = results[4 + appStatuses.length + i].count ?? 0;
+      if (count > 0) oppsByCategory[oppCategories[i]] = count;
     }
 
     return PlatformStats(

@@ -117,6 +117,15 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
   }
 
   @override
+  Stream<Application?> getApplicationById(String applicationId) {
+    return _firestore
+        .collection(_collection)
+        .doc(applicationId)
+        .snapshots()
+        .map((s) => s.exists ? _fromDoc(s) : null);
+  }
+
+  @override
   Stream<Application?> getApplicationForOpportunity(
       String studentId, String opportunityId) {
     return _firestore

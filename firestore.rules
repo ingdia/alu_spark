@@ -98,13 +98,13 @@ service cloud.firestore {
       allow update:
         if verified() &&
           (
-            resource.data.postedBy == request.auth.uid ||
+            resource.data.startupId == request.auth.uid ||
             isAdmin()
           );
 
       allow delete:
         if (
-          resource.data.postedBy == request.auth.uid ||
+          resource.data.startupId == request.auth.uid ||
           isAdmin()
         );
     }
@@ -130,8 +130,8 @@ service cloud.firestore {
         return exists(
             /databases/$(database)/documents/opportunities/$(request.resource.data.opportunityId)
           ) &&
-          opp().data.status == "open" &&
-          opp().data.postedBy == request.resource.data.startupId;
+          opp().data.status == "active" &&
+          opp().data.startupId == request.resource.data.startupId;
       }
 
       // True when no application already exists for this student+opportunity pair.
@@ -241,7 +241,8 @@ service cloud.firestore {
         }
 
         allow read:   if signedIn() && isParticipant();
-        allow create: if signedIn() && isParticipant();
+        allow create: if signedIn() && isParticipant() &&
+          request.resource.data.senderId == request.auth.uid;
         allow update: if signedIn() && isParticipant();
         allow delete: if isAdmin();
       }
@@ -256,6 +257,25 @@ service cloud.firestore {
       allow create: if isOwner(uid) || isAdmin();
       allow update: if isOwner(uid);
       allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    //==========================================================================
+    // ROOMS
+    //==========================================================================
+
+    match /rooms/{roomId} {
+      allow read:   if verified();
+      allow create: if verified();
+      allow update: if verified();
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read:   if verified();
+        allow create: if verified() &&
+          request.resource.data.senderId == request.auth.uid;
+        allow update: if isAdmin();
+        allow delete: if isAdmin();
+      }
     }
 
     //==========================================================================
