@@ -46,11 +46,6 @@ class FirebaseAuthService {
     }
   }
 
-  // Sign in with Google
-  Future<UserCredential> signInWithGoogle() {
-    throw UnimplementedError('Google Sign-In requires the google_sign_in package');
-  }
-
   // Send password reset email
   Future<void> sendPasswordResetEmail(String email) async {
     try {
@@ -88,7 +83,7 @@ class FirebaseAuthService {
       case 'email-already-in-use':
         return 'Email is already registered';
       case 'weak-password':
-        return 'Password is too weak (minimum 6 characters)';
+        return 'Password is too weak (minimum 8 characters)';
       case 'operation-not-allowed':
         return 'Email/password accounts are not enabled';
       case 'too-many-requests':

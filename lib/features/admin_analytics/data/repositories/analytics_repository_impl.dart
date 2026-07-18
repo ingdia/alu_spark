@@ -14,7 +14,7 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     final oppsCol = _firestore.collection('opportunities');
     final appsCol = _firestore.collection('applications');
 
-    const appStatuses = ['applied', 'under_review', 'interview', 'accepted', 'rejected', 'withdrawn'];
+    const appStatuses = ['applied', 'underReview', 'interview', 'accepted', 'rejected', 'withdrawn'];
     const oppCategories = ['Technology', 'Business', 'Design', 'Marketing', 'Finance', 'Other'];
 
     final countQueries = [

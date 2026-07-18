@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:alu_spark/core/constants/app_constants.dart';
 import 'package:alu_spark/core/services/firebase_auth_service.dart';
 import 'package:alu_spark/features/auth/domain/entities/user.dart';
 import 'package:alu_spark/features/auth/domain/repositories/auth_repository.dart';
@@ -10,7 +10,6 @@ class AuthRepositoryImpl implements AuthRepository {
   final FirebaseAuthService _authService;
   final FirebaseFirestore _firestore;
 
-  static const String _adminEmail = 'ngabirediane02@gmail.com';
 
   AuthRepositoryImpl({
     required this._authService,
@@ -38,6 +37,12 @@ class AuthRepositoryImpl implements AuthRepository {
     required String fullName,
     bool isStartup = false,
   }) async {
+    // Guard: only ALU emails may register (defence-in-depth after client validation)
+    final isAdmin = AppConstants.isAdminEmail(email);
+    if (!isAdmin && !AppConstants.isAluEmail(email)) {
+      throw Exception('Only verified ALU email addresses can register.');
+    }
+
     final credential = await _authService.signUpWithEmail(
       email: email,
       password: password,
@@ -78,12 +83,33 @@ class AuthRepositoryImpl implements AuthRepository {
     final firebaseUser = _authService.currentUser!;
     await firebaseUser.reload();
     final refreshed = firebase_auth.FirebaseAuth.instance.currentUser!;
-    final isAdmin = refreshed.email?.trim().toLowerCase() == _adminEmail.toLowerCase();
+    final isAdmin = AppConstants.isAdminEmail(refreshed.email ?? '');
     if (!isAdmin && !refreshed.emailVerified) {
       await _authService.signOut();
       throw Exception('Please verify your email before logging in.');
     }
     await refreshed.getIdToken(true);
+
+    // Ensure the admin's /users doc exists so isAdmin() in Firestore rules
+    // can resolve callerRole() == 'admin'. The doc is created on first login
+    // because the admin never goes through signUpWithEmail.
+    if (isAdmin) {
+      final docRef = _firestore.collection('users').doc(refreshed.uid);
+      final snap = await docRef.get();
+      if (!snap.exists) {
+        await docRef.set({
+          'id': refreshed.uid,
+          'email': refreshed.email ?? email,
+          'fullName': refreshed.displayName ?? 'Admin',
+          'role': 'admin',
+          'createdAt': FieldValue.serverTimestamp(),
+          'isEmailVerified': true,
+          'isApproved': true,
+          'profileComplete': true,
+        });
+      }
+    }
+
     return _fetchUser(refreshed);
   }
 
@@ -98,19 +124,35 @@ class AuthRepositoryImpl implements AuthRepository {
     required String teamSize,
     required List<Map<String, String>> founders,
     required String description,
-    String? proofFilePath,
-    List<int>? proofFileBytes,
-    required String proofFileName,
+    required String proofDocumentUrl,
   }) async {
+    if (founders.length < 2) {
+      throw Exception('A startup must have at least two founders before it can be submitted.');
+    }
+    final trimmedUrl = proofDocumentUrl.trim();
+    if (trimmedUrl.isEmpty) {
+      throw Exception('A verification document link is required.');
+    }
+    if (!AppConstants.isValidUrl(trimmedUrl)) {
+      throw Exception('Please enter a valid URL (must start with https://).');
+    }
     final uid = _authService.currentUser?.uid;
     if (uid == null) throw Exception('User not authenticated');
 
-    debugPrint('submitStartupProfile: uid=$uid');
+    // Reload the Firebase Auth user so email_verified is current,
+    // then force-refresh the ID token so the Firestore rules see
+    // email_verified == true in request.auth.token.
+    await _authService.currentUser?.reload();
+    final refreshedUser = firebase_auth.FirebaseAuth.instance.currentUser;
+    if (refreshedUser == null) throw Exception('User not authenticated');
+    if (!refreshedUser.emailVerified) {
+      throw Exception('Please verify your email before submitting your startup profile.');
+    }
+    await refreshedUser.getIdToken(true);
 
-    await _authService.currentUser?.getIdToken(true);
-    debugPrint('submitStartupProfile: token refreshed, writing to Firestore');
+    final batch = _firestore.batch();
 
-    await _firestore.collection('startups').doc(uid).set({
+    batch.set(_firestore.collection('startups').doc(uid), {
       'uid': uid,
       'startupName': startupName,
       'tagline': tagline,
@@ -121,34 +163,68 @@ class AuthRepositoryImpl implements AuthRepository {
       'teamSize': teamSize,
       'founders': founders,
       'description': description,
-      'proofFileName': proofFileName,
+      'proofDocumentUrl': trimmedUrl,
       'status': 'pending',
       'submittedAt': FieldValue.serverTimestamp(),
-      'adminEmail': _adminEmail,
     });
 
-    debugPrint('submitStartupProfile: startups doc written');
-
-    await _firestore.collection('users').doc(uid).update({
+    batch.update(_firestore.collection('users').doc(uid), {
       'startupProfileStatus': 'pending',
       'startupName': startupName,
       'profileComplete': true,
     });
 
-    debugPrint('submitStartupProfile: users doc updated');
-
-    await _firestore.collection('admin_notifications').add({
+    final adminNotifRef = _firestore.collection('admin_notifications').doc();
+    batch.set(adminNotifRef, {
       'type': 'startup_review',
       'startupId': uid,
       'startupName': startupName,
-      'submittedBy': _authService.currentUser?.email ?? '',
-      'proofFileName': proofFileName,
-      'adminEmail': _adminEmail,
+      'submittedBy': refreshedUser.email ?? '',
+      'proofDocumentUrl': trimmedUrl,
       'status': 'unread',
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    debugPrint('submitStartupProfile: admin_notification written — DONE');
+    await batch.commit();
+  }
+
+  @override
+  Stream<Map<String, dynamic>?> getUserDataStream(String uid) {
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .map((doc) => doc.exists ? doc.data() : null);
+  }
+
+  @override
+  Future<void> markEmailVerified() async {
+    final uid = _authService.currentUser?.uid;
+    if (uid == null) return;
+    await _firestore.collection('users').doc(uid).update({
+      'isEmailVerified': true,
+    });
+  }
+
+  @override
+  Future<void> setUserRole(String role) async {
+    final uid = _authService.currentUser?.uid;
+    if (uid == null) throw Exception('User not authenticated');
+    await _firestore.collection('users').doc(uid).update({
+      'role': role,
+      if (role == 'founder') 'profileComplete': false,
+    });
+  }
+
+  @override
+  Future<void> completeStudentProfile() async {
+    final uid = _authService.currentUser?.uid;
+    if (uid == null) throw Exception('User not authenticated');
+    final displayName = _authService.currentUser?.displayName ?? '';
+    await _firestore.collection('users').doc(uid).update({
+      'profileComplete': true,
+      'fullName': displayName,
+    });
   }
 
   @override
@@ -180,7 +256,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   UserRole _resolveRole(String email, {bool isStartup = false}) {
-    if (email.trim().toLowerCase() == _adminEmail.toLowerCase()) return UserRole.admin;
+    if (AppConstants.isAdminEmail(email)) return UserRole.admin;
     if (isStartup) return UserRole.founder;
     return UserRole.student;
   }

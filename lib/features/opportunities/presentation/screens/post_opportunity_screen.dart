@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
@@ -109,13 +108,11 @@ class _PostOpportunityScreenState
         final currentUser = authState.value;
         if (currentUser == null) throw Exception('Not logged in');
 
-        final startupDoc = await FirebaseFirestore.instance
-            .collection('startups')
-            .doc(currentUser.id)
-            .get();
-        final startupData = startupDoc.data();
-        final startupName =
-            startupData?['startupName'] as String? ?? currentUser.fullName;
+        final startup = await ref
+            .read(startupRepositoryProvider)
+            .getStartupById(currentUser.id)
+            .first;
+        final startupName = startup?.name ?? currentUser.fullName;
 
         final opportunity = Opportunity(
           id: '',

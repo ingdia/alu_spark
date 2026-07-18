@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/app/router/app_router.dart';
@@ -33,7 +34,10 @@ class _StartupOnboardingScreenState
 
   // Step 2 — Founders
   final _step2Key = GlobalKey<FormState>();
-  final List<_FounderEntry> _founders = [_FounderEntry()];
+  late final List<_FounderEntry> _founders;
+  // Locked values for Founder #1 — read directly from FirebaseAuth synchronously.
+  late final String _founderOneName;
+  late final String _founderOneEmail;
 
   // Step 3 — Proof document link
   final _proofLinkController = TextEditingController();
@@ -45,6 +49,22 @@ class _StartupOnboardingScreenState
   ];
   static const _stages = ['Idea', 'MVP', 'Early Stage', 'Growth', 'Scale'];
   static const _sizes = ['1–5', '6–10', '11–20', '21–50', '50+'];
+
+  @override
+  void initState() {
+    super.initState();
+    // Read the current Firebase user synchronously — always available here
+    // because the user must be logged in to reach this screen.
+    final firebaseUser = fb.FirebaseAuth.instance.currentUser;
+    _founderOneName  = firebaseUser?.displayName ?? firebaseUser?.email?.split('@').first ?? '';
+    _founderOneEmail = firebaseUser?.email ?? '';
+
+    // Pre-fill Founder #1 controllers so _submit() can read them normally.
+    final firstEntry = _FounderEntry();
+    firstEntry.nameController.text  = _founderOneName;
+    firstEntry.emailController.text = _founderOneEmail;
+    _founders = [firstEntry];
+  }
 
   @override
   void dispose() {
@@ -166,7 +186,21 @@ class _StartupOnboardingScreenState
 
   void _nextStep() {
     if (_step == 0 && !(_step1Key.currentState?.validate() ?? false)) return;
-    if (_step == 1 && !(_step2Key.currentState?.validate() ?? false)) return;
+    if (_step == 1) {
+      if (!(_step2Key.currentState?.validate() ?? false)) return;
+      if (_founders.length < 2) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Please add at least 2 founders.'),
+            backgroundColor: AppColors.darkRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+        return;
+      }
+    }
     if (_step < 2) {
       setState(() => _step++);
       _pageController.nextPage(
@@ -187,6 +221,31 @@ class _StartupOnboardingScreenState
   }
 
   void _submit() {
+    final url = _proofLinkController.text.trim();
+    if (url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('A proof document link is required.'),
+          backgroundColor: AppColors.darkRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+      return;
+    }
+    if (!url.startsWith('https://') && !url.startsWith('http://')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please enter a valid URL (must start with https://).'),
+          backgroundColor: AppColors.darkRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+      return;
+    }
     ref.read(authNotifierProvider.notifier).registerStartup(
       startupName: _startupNameController.text.trim(),
       tagline: _startupTaglineController.text.trim(),
@@ -203,9 +262,7 @@ class _StartupOnboardingScreenState
               })
           .toList(),
       description: _descController.text.trim(),
-      proofFilePath: null,
-      proofFileBytes: null,
-      proofFileName: _proofLinkController.text.trim(),
+      proofDocumentUrl: url,
     );
   }
 
@@ -407,7 +464,7 @@ class _StartupOnboardingScreenState
               return _FounderCard(
                 index: i,
                 entry: f,
-                canRemove: _founders.length > 1,
+                canRemove: _founders.length > 1 && i > 0,
                 onRemove: () => setState(() => _founders.removeAt(i)),
               );
             }),
@@ -491,7 +548,7 @@ class _StartupOnboardingScreenState
           ),
           const SizedBox(height: 20),
 
-          Text('Proof Document Link (optional)',
+          Text('Proof Document Link *',  // required
               style: AppTextStyles.bodyLarge.copyWith(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
@@ -511,7 +568,7 @@ class _StartupOnboardingScreenState
             blur: 10,
             borderRadius: 14,
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            child: TextField(
+            child: TextFormField(
               controller: _proofLinkController,
               keyboardType: TextInputType.url,
               autocorrect: false,
@@ -528,6 +585,14 @@ class _StartupOnboardingScreenState
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
               ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Required';
+                final t = v.trim();
+                if (!t.startsWith('https://') && !t.startsWith('http://')) {
+                  return 'Must be a valid URL (https://...)';
+                }
+                return null;
+              },
             ),
           ),
           const SizedBox(height: 8),
@@ -612,6 +677,10 @@ class _FounderCard extends StatelessWidget {
     required this.onRemove,
   });
 
+  // Founder #1 (index 0) is the logged-in verified ALU user.
+  // Their name and email are locked; only the role is editable.
+  bool get _isLeadFounder => index == 0;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -642,7 +711,7 @@ class _FounderCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  index == 0 ? 'Lead Founder' : 'Co-Founder ${index + 1}',
+                  index == 0 ? 'Lead Founder (You)' : 'Co-Founder ${index + 1}',
                   style: AppTextStyles.bodyLarge.copyWith(
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
@@ -658,33 +727,98 @@ class _FounderCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
-            AuthTextField(
-              controller: entry.nameController,
-              hintText: 'Full Name *',
-              prefixIcon: Icons.person_outline,
-              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-            ),
-            const SizedBox(height: 10),
+
+            // Name
+            if (_isLeadFounder)
+              _ReadOnlyField(
+                label: 'Full Name',
+                value: entry.nameController.text,
+                icon: Icons.person_outline,
+              )
+            else
+              AuthTextField(
+                controller: entry.nameController,
+                hintText: 'Full Name *',
+                prefixIcon: Icons.person_outline,
+                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+              ),
+            const SizedBox(height: 12),
+
+            // Role (editable for everyone)
             AuthTextField(
               controller: entry.roleController,
               hintText: 'Role (e.g. CEO, CTO) *',
               prefixIcon: Icons.work_outline,
               validator: (v) => v == null || v.isEmpty ? 'Required' : null,
             ),
-            const SizedBox(height: 10),
-            AuthTextField(
-              controller: entry.emailController,
-              hintText: 'Email Address *',
-              prefixIcon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Required';
-                if (!v.contains('@')) return 'Enter a valid email';
-                return null;
-              },
-            ),
+            const SizedBox(height: 12),
+
+            // Email
+            if (_isLeadFounder)
+              _ReadOnlyField(
+                label: 'Email',
+                value: entry.emailController.text,
+                icon: Icons.email_outlined,
+              )
+            else
+              AuthTextField(
+                controller: entry.emailController,
+                hintText: 'Email *',
+                prefixIcon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Required';
+                  if (!v.contains('@')) return 'Invalid email';
+                  return null;
+                },
+              ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Read-only display field ───────────────────────────────────────────────────
+class _ReadOnlyField extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+
+  const _ReadOnlyField({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassmorphicContainer(
+      blur: 10,
+      borderRadius: 12,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.textSecondary, size: 18),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary, fontSize: 10)),
+                const SizedBox(height: 2),
+                Text(
+                  value.isEmpty ? '—' : value,
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.lock_outline,
+              color: AppColors.textSecondary, size: 14),
+        ],
       ),
     );
   }

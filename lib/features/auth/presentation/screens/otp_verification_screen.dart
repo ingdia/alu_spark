@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/router/app_router.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
+import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 
-class OtpVerificationScreen extends StatefulWidget {
+class OtpVerificationScreen extends ConsumerStatefulWidget {
   final String email;
   final String name;
 
@@ -18,10 +18,10 @@ class OtpVerificationScreen extends StatefulWidget {
   });
 
   @override
-  State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
+  ConsumerState<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
 }
 
-class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
+class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   bool _isChecking = false;
   bool _isResending = false;
   bool _canResend = false;
@@ -65,10 +65,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   Future<void> _checkVerification({bool silent = false}) async {
     if (!silent) setState(() => _isChecking = true);
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final authService = ref.read(firebaseAuthServiceProvider);
+      final user = authService.currentUser;
       if (user == null) return;
       await user.reload();
-      final fresh = FirebaseAuth.instance.currentUser;
+      final fresh = authService.currentUser;
       if (fresh != null && fresh.emailVerified) {
         // Force-refresh the ID token so Firestore sees email_verified = true
         await fresh.getIdToken(true);
@@ -88,13 +89,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   void _goToProfileSetup() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid != null) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .update({'isEmailVerified': true});
-    }
+    // Delegate the Firestore write to the repository — no direct Firestore call.
+    await ref.read(authRepositoryProvider).markEmailVerified();
     if (!mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil(
       RouteNames.roleSelection,
@@ -105,7 +101,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   Future<void> _resendEmail() async {
     setState(() => _isResending = true);
     try {
-      await FirebaseAuth.instance.currentUser?.sendEmailVerification();
+      await ref.read(firebaseAuthServiceProvider).currentUser?.sendEmailVerification();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Verification email resent!')),

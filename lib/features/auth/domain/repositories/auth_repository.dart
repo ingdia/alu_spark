@@ -26,10 +26,20 @@ abstract class AuthRepository {
     required String teamSize,
     required List<Map<String, String>> founders,
     required String description,
-    String? proofFilePath,
-    List<int>? proofFileBytes,
-    required String proofFileName,
+    required String proofDocumentUrl,
   });
+
+  /// Called after email verification is confirmed — marks the user doc.
+  Future<void> markEmailVerified();
+
+  /// Streams the raw user document map for routing decisions.
+  Stream<Map<String, dynamic>?> getUserDataStream(String uid);
+
+  /// Called from role selection — persists the chosen role to the user doc.
+  Future<void> setUserRole(String role);
+
+  /// Called after student onboarding — marks the profile as complete.
+  Future<void> completeStudentProfile();
 
   Future<void> signOut();
 }

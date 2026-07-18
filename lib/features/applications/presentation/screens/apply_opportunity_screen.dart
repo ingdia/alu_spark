@@ -6,7 +6,6 @@ import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/core/providers/repository_providers.dart';
-import 'package:alu_spark/core/services/notification_service.dart';
 import 'package:alu_spark/core/utils/url_utils.dart';
 import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 import 'package:alu_spark/features/applications/domain/entities/application.dart';
@@ -67,8 +66,12 @@ class _ApplyOpportunityScreenState
   Future<void> _handleSubmit() async {
     setState(() => _isSubmitting = true);
     try {
+      // Reload and force-refresh the token so Firestore rules see
+      // email_verified == true in request.auth.token.
+      await fb.FirebaseAuth.instance.currentUser?.reload();
       final currentUser = fb.FirebaseAuth.instance.currentUser;
       if (currentUser == null) throw Exception('Not logged in');
+      await currentUser.getIdToken(true);
 
       final alreadyApplied = await ref
           .read(applicationRepositoryProvider)
@@ -107,7 +110,7 @@ class _ApplyOpportunityScreenState
           .read(opportunityRepositoryProvider)
           .incrementApplicationCount(widget.opportunity.id);
 
-      await NotificationService().notifyNewApplication(
+      await ref.read(notificationServiceProvider).notifyNewApplication(
         startupId: widget.opportunity.startupId,
         studentName: currentUser.displayName ??
             currentUser.email?.split('@').first ??

@@ -22,6 +22,11 @@ class AppColors {
   // UI
   static const Color lightGray = Color(0xFFCBD5E1);
 
+  // Semantic colours — use these instead of inline hex literals
+  static const Color successGreen = Color(0xFF1B5E20);
+  static const Color accentPurple  = Color(0xFF6366F1);
+  static const Color accentGreen   = Color(0xFF22C55E);
+
   // Gradients
   static const LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topLeft,

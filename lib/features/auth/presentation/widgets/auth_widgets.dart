@@ -9,16 +9,18 @@ class AuthTextField extends StatelessWidget {
   final IconData prefixIcon;
   final bool obscureText;
   final TextInputType keyboardType;
-  final String? Function(String?) validator;
+  final String? Function(String?)? validator;
+  final Widget? suffixIcon;
 
   const AuthTextField({
     super.key,
     required this.controller,
     required this.hintText,
     required this.prefixIcon,
-    required this.validator,
+    this.validator,
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
+    this.suffixIcon,
   });
 
   @override
@@ -36,6 +38,7 @@ class AuthTextField extends StatelessWidget {
           hintText: hintText,
           hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
           prefixIcon: Icon(prefixIcon, color: AppColors.darkRed),
+          suffixIcon: suffixIcon,
           border: InputBorder.none,
         ),
         validator: validator,

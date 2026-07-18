@@ -191,7 +191,7 @@ class _ApplicantProfileScreenState
         error: (e, _) => ErrorStateWidget(message: e.toString()),
         data: (_) => studentAsync.when(
           loading: () => const LoadingWidget(message: 'Loading profile...'),
-          error: (_, __) => _buildBody(context, liveApp, null),
+          error: (_, _) => _buildBody(context, liveApp, null),
           data: (student) => _buildBody(context, liveApp, student),
         ),
       ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:alu_spark/app/router/app_router.dart';
+import 'package:alu_spark/core/constants/app_constants.dart';
 import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/core/providers/role_provider.dart';
 import 'package:alu_spark/features/auth/presentation/screens/app_loading_screen.dart';
@@ -68,7 +68,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
         // Email not verified yet — stay put (OTP screen handles this)
         // Admin role bypasses email verification requirement
-        final isAdmin = user.email.trim().toLowerCase() == 'ngabirediane02@gmail.com';
+        final isAdmin = AppConstants.isAdminEmail(user.email);
         if (!user.isEmailVerified && !isAdmin) {
           return const AppLoadingScreen();
         }
@@ -83,20 +83,17 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         }
 
         // Fetch fresh Firestore data to make routing decisions
-        return StreamBuilder<DocumentSnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.id)
-              .snapshots(),
+        return StreamBuilder<Map<String, dynamic>?>(
+          stream: ref.read(authRepositoryProvider).getUserDataStream(user.id),
           builder: (context, snapshot) {
             // Doc missing → treat as incomplete profile
-            if (snapshot.hasData && snapshot.data?.data() == null) {
+            if (snapshot.hasData && snapshot.data == null) {
               _navigateTo(RouteNames.roleSelection);
               return const AppLoadingScreen();
             }
             if (!snapshot.hasData) return const AppLoadingScreen();
 
-            final data = snapshot.data!.data() as Map<String, dynamic>;
+            final data = snapshot.data!;
             final roleStr = data['role'] as String? ?? 'student';
             final profileComplete = data['profileComplete'] as bool? ?? false;
             final startupStatus = data['startupProfileStatus'] as String?;
