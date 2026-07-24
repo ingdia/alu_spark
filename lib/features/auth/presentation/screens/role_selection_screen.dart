@@ -15,7 +15,7 @@ class RoleSelectionScreen extends ConsumerStatefulWidget {
 }
 
 class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
-  String? _selected; // 'student' or 'startup'
+  String? _selected; // 'student' or 'founder'
   bool _isLoading = false;
 
   Future<void> _continue() async {
@@ -84,11 +84,11 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
               ),
               const SizedBox(height: 16),
               _RoleCard(
-                selected: _selected == 'startup',
+                selected: _selected == 'founder',
                 icon: Icons.rocket_launch_outlined,
                 title: 'Startup / Founder',
                 description: 'I run a startup and want to post opportunities and find talent.',
-                onTap: () => setState(() => _selected = 'startup'),
+                onTap: () => setState(() => _selected = 'founder'),
               ),
               const Spacer(),
               SizedBox(

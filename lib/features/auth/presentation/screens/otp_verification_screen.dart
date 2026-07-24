@@ -89,13 +89,24 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   }
 
   void _goToProfileSetup() async {
-    // Delegate the Firestore write to the repository — no direct Firestore call.
+    // Persist the verified flag, then refresh the auth stream so AuthWrapper
+    // re-reads a fresh (verified) user. Routing through the root ('/') handles
+    // BOTH a brand-new registrant (→ role selection) and a returning user who
+    // just verified on a cold start (→ home / startup-pending) — the wrapper
+    // decides based on their Firestore profile, so we don't hardcode it here.
     await ref.read(authRepositoryProvider).markEmailVerified();
+    ref.invalidate(authStateProvider);
     if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      RouteNames.roleSelection,
+    Navigator.of(context).pushAndRemoveUntil(
+      AppRouter.generateRoute(const RouteSettings(name: '/')),
       (_) => false,
     );
+  }
+
+  Future<void> _signOut() async {
+    await ref.read(authRepositoryProvider).signOut();
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil(RouteNames.login, (_) => false);
   }
 
   Future<void> _resendEmail() async {
@@ -209,6 +220,24 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                         ],
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Escape hatch: never trap a user on this screen. If the email
+                // genuinely isn't verified (wrong account, no inbox access, an
+                // admin-created record, etc.) they can sign out and return to
+                // login instead of being stuck.
+                Center(
+                  child: TextButton(
+                    onPressed: _signOut,
+                    child: Text(
+                      'Use a different account',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
                   ),
                 ),
               ],

@@ -233,26 +233,36 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   Future<User> _fetchUser(firebase_auth.User firebaseUser) async {
+    // authStateChanges emits a user carrying a CACHED token; its emailVerified
+    // flag does not update when the email is verified later. Reload so the flag
+    // reflects the current state — otherwise a verified user can get trapped on
+    // the loading screen (AuthWrapper gates on isEmailVerified).
+    var authUser = firebaseUser;
     try {
-      final doc = await _firestore.collection('users').doc(firebaseUser.uid).get();
+      await authUser.reload();
+      authUser = _authService.currentUser ?? authUser;
+    } catch (_) {}
+
+    try {
+      final doc = await _firestore.collection('users').doc(authUser.uid).get();
       if (doc.exists) {
         final data = doc.data()!;
         final roleStr = data['role'] as String? ?? 'student';
         final role = UserRole.values.firstWhere(
           (r) => r.name == roleStr,
-          orElse: () => _resolveRole(firebaseUser.email ?? ''),
+          orElse: () => _resolveRole(authUser.email ?? ''),
         );
         return User(
-          id: firebaseUser.uid,
-          email: firebaseUser.email ?? '',
-          fullName: data['fullName'] as String? ?? firebaseUser.displayName ?? 'User',
+          id: authUser.uid,
+          email: authUser.email ?? '',
+          fullName: data['fullName'] as String? ?? authUser.displayName ?? 'User',
           role: role,
           createdAt: DateTime.now(),
-          isEmailVerified: firebaseUser.emailVerified,
+          isEmailVerified: authUser.emailVerified,
         );
       }
     } catch (_) {}
-    return _mapToUserBasic(firebaseUser);
+    return _mapToUserBasic(authUser);
   }
 
   UserRole _resolveRole(String email, {bool isStartup = false}) {

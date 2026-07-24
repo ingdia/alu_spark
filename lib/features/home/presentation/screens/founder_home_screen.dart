@@ -11,6 +11,7 @@ import 'package:alu_spark/features/applications/presentation/providers/applicati
 import 'package:alu_spark/features/applications/domain/entities/application.dart';
 import 'package:alu_spark/features/opportunities/presentation/providers/opportunity_provider.dart';
 import 'package:alu_spark/shared/enums/application_status.dart';
+import 'package:alu_spark/features/startup_profile/presentation/providers/startup_provider.dart';
 
 class FounderHomeScreen extends ConsumerWidget {
   const FounderHomeScreen({super.key});
@@ -67,23 +68,60 @@ class FounderHomeScreen extends ConsumerWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const AluLogo(size: 40),
-        GestureDetector(
-          onTap: () => Navigator.of(context).pushNamed(RouteNames.notifications),
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.glassWhite,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.borderGlass),
+    return Consumer(
+      builder: (context, ref, _) {
+        final authState = ref.watch(authStateProvider);
+        final uid = authState.value?.id ?? '';
+        final startupAsync = ref.watch(startupDetailProvider(uid));
+        final startupName = startupAsync.value?.name ?? '';
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const AluLogo(size: 40),
+                if (startupName.isNotEmpty) ...[
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        startupName,
+                        style: AppTextStyles.headingMedium.copyWith(
+                          fontSize: 16,
+                          letterSpacing: -0.3,
+                          height: 1.2,
+                        ),
+                      ),
+                      Text(
+                        'Founder Dashboard',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
             ),
-            child: const Icon(Icons.notifications_outlined, color: AppColors.white, size: 24),
-          ),
-        ),
-      ],
+            GestureDetector(
+              onTap: () => Navigator.of(context).pushNamed(RouteNames.notifications),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.glassWhite,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.borderGlass),
+                ),
+                child: const Icon(Icons.notifications_outlined, color: AppColors.white, size: 24),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

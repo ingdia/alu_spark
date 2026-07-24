@@ -186,57 +186,62 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
           description: 'No conversations match "$query".',
         );
       }
-      return Center(
-        child: Padding(
+      return LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
           padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 88,
-                height: 88,
-                decoration: BoxDecoration(
-                  color: AppColors.darkRed.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: const Icon(Icons.chat_bubble_rounded,
-                    size: 40, color: AppColors.darkRed),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'No Conversations Yet',
-                style: AppTextStyles.headingMedium
-                    .copyWith(color: AppColors.white, fontSize: 20),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Start a conversation by applying to an opportunity or connecting with a founder.',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              GestureDetector(
-                onTap: () =>
-                    Navigator.of(context).pushNamed(RouteNames.discover),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 14),
-                  decoration: BoxDecoration(
-                    gradient: AppColors.redGradient,
-                    borderRadius: BorderRadius.circular(14),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 88,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      color: AppColors.darkRed.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: const Icon(Icons.chat_bubble_rounded,
+                        size: 40, color: AppColors.darkRed),
                   ),
-                  child: Text(
-                    'Browse Opportunities',
-                    style: AppTextStyles.bodyLarge.copyWith(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.w600),
+                  const SizedBox(height: 24),
+                  Text(
+                    'No Conversations Yet',
+                    style: AppTextStyles.headingMedium
+                        .copyWith(color: AppColors.white, fontSize: 20),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Start a conversation by applying to an opportunity or connecting with a founder.',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  GestureDetector(
+                    onTap: () =>
+                        Navigator.of(context).pushNamed(RouteNames.discover),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: AppColors.redGradient,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        'Browse Opportunities',
+                        style: AppTextStyles.bodyLarge.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       );

@@ -1,4 +1,4 @@
-# ALU Spark 🔥
+# ALU Spark 
 
 > The official internship and opportunity platform for the African Leadership University ecosystem.
 
@@ -6,13 +6,13 @@ ALU Spark connects ALU students with startups founded by fellow ALU entrepreneur
 
 ---
 
-## 🎬 Demo Video
+## Demo Video
 
-> 📹 **[Watch the Demo](YOUR_DEMO_VIDEO_LINK_HERE)**
+>  **[Watch the Demo](YOUR_DEMO_VIDEO_LINK_HERE)**
 
 ---
 
-## ✨ Features
+##  Features
 
 ### For Students
 - Register with your ALU email (`@alustudent.com` / `@alueducation.com`)
@@ -37,7 +37,7 @@ ALU Spark connects ALU students with startups founded by fellow ALU entrepreneur
 
 ---
 
-## 🏗️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -52,7 +52,7 @@ ALU Spark connects ALU students with startups founded by fellow ALU entrepreneur
 
 ---
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 lib/
@@ -85,7 +85,7 @@ lib/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Flutter SDK `^3.12.2`
@@ -115,7 +115,7 @@ cp .env.example .env
 
 ---
 
-## 🔐 Authentication Flow
+## Authentication Flow
 
 ```
 Register (ALU email only)
@@ -132,7 +132,7 @@ Register (ALU email only)
 
 ---
 
-## 🛡️ Firestore Security Rules
+##  Firestore Security Rules
 
 - Users can only read/write their own documents
 - Startups can only be created by their owner (`isOwner(uid)`)
@@ -143,7 +143,7 @@ Register (ALU email only)
 
 ---
 
-## 📦 Key Dependencies
+##  Key Dependencies
 
 | Package | Purpose |
 |---|---|
@@ -160,7 +160,7 @@ Register (ALU email only)
 
 ---
 
-## 👥 User Roles
+##  User Roles
 
 | Role | Description |
 |---|---|
@@ -170,19 +170,14 @@ Register (ALU email only)
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 > _Coming soon_
 
 ---
 
-## 🤝 Contributing
 
-This project is built for the ALU ecosystem. If you're an ALU student or faculty member and want to contribute, open an issue or submit a pull request.
-
----
-
-## 📄 License
+## License
 
 This project is private and intended for use within the African Leadership University community.
 

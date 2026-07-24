@@ -53,7 +53,11 @@ class VerificationNotifier extends Notifier<AsyncValue<void>> {
       );
       batch.update(
         FirebaseFirestore.instance.collection('users').doc(startupId),
-        {'isApproved': true, 'startupProfileStatus': 'approved'},
+        {
+          'role': 'founder',
+          'isApproved': true,
+          'startupProfileStatus': 'approved',
+        },
       );
       await batch.commit();
       state = const AsyncData(null);

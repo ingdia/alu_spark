@@ -7,6 +7,7 @@ import 'package:alu_spark/app/router/app_router.dart';
 import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/features/student_profile/domain/entities/student.dart';
+import 'package:alu_spark/core/widgets/avatar_widget.dart';
 import 'package:alu_spark/features/student_profile/presentation/providers/student_profile_provider.dart';
 
 class StudentProfileScreen extends ConsumerWidget {
@@ -190,35 +191,12 @@ class _ProfileBody extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.darkRed, width: 2.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.darkRed.withValues(alpha: 0.35),
-                          blurRadius: 14,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: 36,
-                      backgroundColor: AppColors.darkBlueLight,
-                      backgroundImage: student.profileImageUrl != null
-                          ? NetworkImage(student.profileImageUrl!)
-                          : null,
-                      child: student.profileImageUrl == null
-                          ? Text(
-                              student.fullName.isNotEmpty ? student.fullName[0].toUpperCase() : '?',
-                              style: const TextStyle(
-                                color: AppColors.white,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            )
-                          : null,
-                    ),
+                  AvatarWidget(
+                    name: student.fullName,
+                    imageUrl: student.profileImageUrl,
+                    radius: 36,
+                    borderColor: AppColors.darkRed,
+                    borderWidth: 2.5,
                   ),
                   const SizedBox(width: 14),
                   Expanded(

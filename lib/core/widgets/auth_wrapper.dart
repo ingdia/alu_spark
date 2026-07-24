@@ -16,8 +16,8 @@ class AuthWrapper extends ConsumerStatefulWidget {
 
 class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   bool _initialDelayDone = false;
-  bool _hasNavigated = false;
-  String? _lastAuthUid; // track identity changes only
+  String? _lastAuthUid;
+  String? _lastDestination;
 
   @override
   void initState() {
@@ -28,8 +28,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   }
 
   void _navigateTo(String routeName) {
-    if (_hasNavigated) return;
-    _hasNavigated = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
@@ -57,19 +55,35 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         final currentUid = user?.id;
         if (currentUid != _lastAuthUid) {
           _lastAuthUid = currentUid;
-          _hasNavigated = false;
+          _lastDestination = null;
         }
 
         // Not logged in
         if (user == null) {
-          _navigateTo(RouteNames.splash);
+          if (_lastDestination != RouteNames.splash) {
+            _lastDestination = RouteNames.splash;
+            _navigateTo(RouteNames.splash);
+          }
           return const AppLoadingScreen();
         }
 
-        // Email not verified yet — stay put (OTP screen handles this)
-        // Admin role bypasses email verification requirement
+        // Email not verified yet — route to the OTP screen, which polls for
+        // verification and can recover. Returning a bare loading screen here
+        // traps the user on an infinite spinner with no way out.
+        // Admin role bypasses email verification requirement.
         final isAdmin = AppConstants.isAdminEmail(user.email);
         if (!user.isEmailVerified && !isAdmin) {
+          if (_lastDestination != RouteNames.otpVerification) {
+            _lastDestination = RouteNames.otpVerification;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              Navigator.of(context).pushNamedAndRemoveUntil(
+                RouteNames.otpVerification,
+                (_) => false,
+                arguments: {'email': user.email, 'name': user.fullName},
+              );
+            });
+          }
           return const AppLoadingScreen();
         }
 
@@ -77,7 +91,10 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         if (isAdmin) {
           Future.microtask(() {
             ref.read(roleProvider.notifier).setRole(UserRole.admin);
-            _navigateTo(RouteNames.home);
+            if (_lastDestination != RouteNames.home) {
+              _lastDestination = RouteNames.home;
+              _navigateTo(RouteNames.home);
+            }
           });
           return const AppLoadingScreen();
         }
@@ -108,7 +125,10 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
             if (role == UserRole.admin) {
               Future.microtask(() {
                 ref.read(roleProvider.notifier).setRole(UserRole.admin);
-                _navigateTo(RouteNames.home);
+                if (_lastDestination != RouteNames.home) {
+                  _lastDestination = RouteNames.home;
+                  _navigateTo(RouteNames.home);
+                }
               });
               return const AppLoadingScreen();
             }
@@ -126,7 +146,10 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
             Future.microtask(() {
               ref.read(roleProvider.notifier).setRole(role);
-              _navigateTo(destination);
+              if (destination != _lastDestination) {
+                _lastDestination = destination;
+                _navigateTo(destination);
+              }
             });
             return const AppLoadingScreen();
           },

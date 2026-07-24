@@ -112,12 +112,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     return Scaffold(
       extendBody: true,
       backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        actions: const [],
-      ),
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
         child: SafeArea(
