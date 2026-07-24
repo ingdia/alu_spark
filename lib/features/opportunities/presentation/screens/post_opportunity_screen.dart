@@ -181,7 +181,12 @@ class _PostOpportunityScreenState
       backgroundColor: AppColors.darkBlue,
       appBar: _buildAppBar(),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          120 + MediaQuery.of(context).padding.bottom,
+        ),
         child: Form(
           key: _formKey,
           child: Column(

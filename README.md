@@ -8,7 +8,7 @@ ALU Spark connects ALU students with startups founded by fellow ALU entrepreneur
 
 ## Demo Video
 
->  **[Watch the Demo](YOUR_DEMO_VIDEO_LINK_HERE)**
+>  **[Watch the Demo](https://www.youtube.com/watch?v=I3LmmUz1K48)**
 
 ---
 
@@ -172,7 +172,17 @@ Register (ALU email only)
 
 ## Screenshots
 
-> _Coming soon_
+![Home page](image.png)
+![apply page ](image-2.png)  ![Application page ](image-1.png)
+
+![Chatting in room ](image-3.png) ![chatting page](image-4.png)
+
+![oppotunities](image-7.png)
+![analytics page](image-6.png)
+
+![post opportunity page](image-8.png)
+
+
 
 ---
 
@@ -183,4 +193,4 @@ This project is private and intended for use within the African Leadership Unive
 
 ---
 
-<p align="center">Built with ❤️ by ALU students, for ALU students.</p>
+<p align="center">Built by ALU student, for ALU students.</p>
