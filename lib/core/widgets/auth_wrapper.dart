@@ -7,6 +7,26 @@ import 'package:alu_spark/core/providers/role_provider.dart';
 import 'package:alu_spark/features/auth/presentation/screens/app_loading_screen.dart';
 import 'package:alu_spark/shared/enums/user_role.dart';
 
+String resolvePostLoginDestination({
+  required UserRole role,
+  required bool profileComplete,
+  required String? startupStatus,
+}) {
+  if (role == UserRole.student) {
+    return RouteNames.home;
+  }
+
+  if (!profileComplete) {
+    return RouteNames.roleSelection;
+  }
+
+  if (role == UserRole.founder && (startupStatus == 'pending' || startupStatus == 'rejected')) {
+    return RouteNames.startupPending;
+  }
+
+  return RouteNames.home;
+}
+
 class AuthWrapper extends ConsumerStatefulWidget {
   const AuthWrapper({super.key});
 
@@ -42,6 +62,7 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
     if (!_initialDelayDone) return const AppLoadingScreen();
 
     final authState = ref.watch(authStateProvider);
+    final currentFirebaseUser = ref.read(firebaseAuthServiceProvider).currentUser;
 
     return authState.when(
       loading: () => const AppLoadingScreen(),
@@ -58,11 +79,15 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           _lastDestination = null;
         }
 
-        // Not logged in
+        // If the auth stream is temporarily empty during a login transition,
+        // but Firebase already has a signed-in user, keep the wrapper on the
+        // loading screen rather than bouncing to the splash/landing route.
         if (user == null) {
-          if (_lastDestination != RouteNames.splash) {
-            _lastDestination = RouteNames.splash;
-            _navigateTo(RouteNames.splash);
+          if (currentFirebaseUser == null) {
+            if (_lastDestination != RouteNames.splash) {
+              _lastDestination = RouteNames.splash;
+              _navigateTo(RouteNames.splash);
+            }
           }
           return const AppLoadingScreen();
         }
@@ -99,7 +124,21 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
           return const AppLoadingScreen();
         }
 
-        // Fetch fresh Firestore data to make routing decisions
+        // Students should reach Home immediately using the role already resolved
+        // from the authenticated user state; waiting on the Firestore stream can
+        // leave them stuck on the loading screen if the doc hasn't arrived yet.
+        if (user.role == UserRole.student) {
+          Future.microtask(() {
+            ref.read(roleProvider.notifier).setRole(UserRole.student);
+            if (_lastDestination != RouteNames.home) {
+              _lastDestination = RouteNames.home;
+              _navigateTo(RouteNames.home);
+            }
+          });
+          return const AppLoadingScreen();
+        }
+
+        // Fetch fresh Firestore data to make routing decisions for founders.
         return StreamBuilder<Map<String, dynamic>?>(
           stream: ref.read(authRepositoryProvider).getUserDataStream(user.id),
           builder: (context, snapshot) {
@@ -133,16 +172,11 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
               return const AppLoadingScreen();
             }
 
-            String destination;
-            if (!profileComplete) {
-              destination = RouteNames.roleSelection;
-            } else if (role == UserRole.founder && startupStatus == 'pending') {
-              destination = RouteNames.startupPending;
-            } else if (role == UserRole.founder && startupStatus == 'rejected') {
-              destination = RouteNames.startupPending;
-            } else {
-              destination = RouteNames.home;
-            }
+            final destination = resolvePostLoginDestination(
+              role: role,
+              profileComplete: profileComplete,
+              startupStatus: startupStatus,
+            );
 
             Future.microtask(() {
               ref.read(roleProvider.notifier).setRole(role);

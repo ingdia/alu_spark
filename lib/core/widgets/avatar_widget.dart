@@ -40,7 +40,11 @@ class AvatarWidget extends StatelessWidget {
       radius: radius,
       backgroundColor: backgroundColor ?? AppColors.darkBlueLight,
       backgroundImage: imageUrl != null ? NetworkImage(imageUrl!) : null,
-      onBackgroundImageError: imageUrl != null ? (_, __) {} : null,
+      onBackgroundImageError: imageUrl != null
+          ? (exception, stackTrace) {
+              debugPrint('Failed to load avatar image: $exception\n$stackTrace');
+            }
+          : null,
       child: imageUrl == null
           ? Text(
               acronym,
