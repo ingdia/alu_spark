@@ -24,9 +24,10 @@ class BookmarkModel {
 
   factory BookmarkModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    final userId = data['userId'] as String? ?? '';
     return BookmarkModel(
-      id: doc.id,
-      userId: data['userId'] ?? '',
+      id: '${userId}_${doc.id}',
+      userId: userId,
       opportunityId: data['opportunityId'] ?? '',
       opportunityTitle: data['opportunityTitle'] ?? '',
       startupName: data['startupName'] ?? '',

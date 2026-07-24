@@ -27,6 +27,7 @@ class _OpportunityDetailScreenState
     extends ConsumerState<OpportunityDetailScreen> {
   bool _isBookmarked = false;
   bool _bookmarkLoading = false;
+  bool _actionLoading = false;
 
   Opportunity get opportunity => widget.opportunity;
 
@@ -186,6 +187,10 @@ class _OpportunityDetailScreenState
                   _buildSectionTitle('What We Offer'),
                   const SizedBox(height: 12),
                   _buildBenefits(),
+                  if (opportunity.status != OpportunityStatus.active) ...[
+                    const SizedBox(height: 24),
+                    _buildStatusBanner(),
+                  ],
                   const SizedBox(height: 100),
                 ],
               ),
@@ -197,7 +202,175 @@ class _OpportunityDetailScreenState
     );
   }
 
+  // ── Founder actions ───────────────────────────────────────────────────────
+
+  Future<void> _editOpportunity() async {
+    await Navigator.of(context).pushNamed(
+      RouteNames.editOpportunity,
+      arguments: opportunity,
+    );
+  }
+
+  Future<void> _closeOpportunity() async {
+    final confirmed = await _confirmDialog(
+      title: 'Close Opportunity',
+      message:
+          'Closing "${opportunity.title}" will prevent new applications. All applicants will be notified.',
+      confirmLabel: 'Close',
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _actionLoading = true);
+    try {
+      final repo = ref.read(opportunityRepositoryProvider);
+      final notifications = ref.read(notificationServiceProvider);
+      final applicantIds = await repo.getApplicantIds(opportunity.id);
+      await repo.closeOpportunity(opportunity.id);
+      await notifications.notifyOpportunityClosed(
+        studentIds: applicantIds,
+        opportunityTitle: opportunity.title,
+        opportunityId: opportunity.id,
+      );
+      if (mounted) {
+        _showSnack('Opportunity closed.', success: true);
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) _showSnack('Failed: $e');
+    } finally {
+      if (mounted) setState(() => _actionLoading = false);
+    }
+  }
+
+  Future<void> _archiveOpportunity() async {
+    final confirmed = await _confirmDialog(
+      title: 'Archive Opportunity',
+      message:
+          'Archiving "${opportunity.title}" will hide it from all views. All applicants will be notified.',
+      confirmLabel: 'Archive',
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _actionLoading = true);
+    try {
+      final repo = ref.read(opportunityRepositoryProvider);
+      final notifications = ref.read(notificationServiceProvider);
+      final applicantIds = await repo.getApplicantIds(opportunity.id);
+      await repo.archiveOpportunity(opportunity.id);
+      await notifications.notifyOpportunityArchived(
+        studentIds: applicantIds,
+        opportunityTitle: opportunity.title,
+        opportunityId: opportunity.id,
+      );
+      if (mounted) {
+        _showSnack('Opportunity archived.', success: true);
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) _showSnack('Failed: $e');
+    } finally {
+      if (mounted) setState(() => _actionLoading = false);
+    }
+  }
+
+  Future<void> _deleteOpportunity() async {
+    final confirmed = await _confirmDialog(
+      title: 'Delete Opportunity',
+      message:
+          'Permanently delete "${opportunity.title}"? This cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _actionLoading = true);
+    try {
+      await ref.read(opportunityRepositoryProvider).deleteOpportunity(opportunity.id);
+      if (mounted) {
+        _showSnack('Opportunity deleted.', success: true);
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) _showSnack('Failed: $e');
+    } finally {
+      if (mounted) setState(() => _actionLoading = false);
+    }
+  }
+
+  Future<bool?> _confirmDialog({
+    required String title,
+    required String message,
+    required String confirmLabel,
+    bool destructive = false,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: AppColors.darkBlueLight,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(title,
+                  style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
+              const SizedBox(height: 12),
+              Text(message,
+                  style: AppTextStyles.bodyMedium
+                      .copyWith(color: AppColors.textSecondary, height: 1.5),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.borderGlass),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: Text('Cancel',
+                        style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          destructive ? AppColors.darkRed : AppColors.darkRedLight,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                    ),
+                    child: Text(confirmLabel,
+                        style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white)),
+                  ),
+                ),
+              ]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showSnack(String msg, {bool success = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg,
+          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white)),
+      backgroundColor: success ? const Color(0xFF1B5E20) : AppColors.darkRed,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.all(16),
+    ));
+  }
+
   PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final uid = fb.FirebaseAuth.instance.currentUser?.uid ?? '';
+    final isFounder = opportunity.startupId == uid;
+
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -215,47 +388,110 @@ class _OpportunityDetailScreenState
         ),
       ),
       actions: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: GlassmorphicContainer(
-            blur: 10,
-            borderRadius: 12,
-            padding: const EdgeInsets.all(0),
-            child: IconButton(
-              icon: _bookmarkLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          color: AppColors.white, strokeWidth: 2))
-                  : Icon(
-                      _isBookmarked
-                          ? Icons.bookmark
-                          : Icons.bookmark_border,
-                      color: _isBookmarked
-                          ? AppColors.darkRed
-                          : AppColors.white,
-                      size: 20,
+        if (!isFounder) ...[
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: GlassmorphicContainer(
+              blur: 10,
+              borderRadius: 12,
+              padding: const EdgeInsets.all(0),
+              child: IconButton(
+                icon: _bookmarkLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            color: AppColors.white, strokeWidth: 2))
+                    : Icon(
+                        _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                        color: _isBookmarked ? AppColors.darkRed : AppColors.white,
+                        size: 20,
+                      ),
+                onPressed: _bookmarkLoading ? null : _toggleBookmark,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: GlassmorphicContainer(
+              blur: 10,
+              borderRadius: 12,
+              padding: const EdgeInsets.all(0),
+              child: IconButton(
+                icon: const Icon(Icons.share_outlined,
+                    color: AppColors.white, size: 20),
+                onPressed: () {},
+              ),
+            ),
+          ),
+        ] else
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: GlassmorphicContainer(
+              blur: 10,
+              borderRadius: 12,
+              padding: const EdgeInsets.all(0),
+              child: _actionLoading
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            color: AppColors.white, strokeWidth: 2),
+                      ),
+                    )
+                  : PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert, color: AppColors.white, size: 20),
+                      color: AppColors.darkBlueLight,
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'edit':
+                            _editOpportunity();
+                          case 'close':
+                            _closeOpportunity();
+                          case 'archive':
+                            _archiveOpportunity();
+                          case 'delete':
+                            _deleteOpportunity();
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: _menuItem(Icons.edit_outlined, 'Edit', AppColors.white),
+                        ),
+                        if (opportunity.status == OpportunityStatus.active)
+                          PopupMenuItem(
+                            value: 'close',
+                            child: _menuItem(
+                                Icons.lock_outline, 'Close', AppColors.textSecondary),
+                          ),
+                        if (opportunity.status != OpportunityStatus.archived)
+                          PopupMenuItem(
+                            value: 'archive',
+                            child: _menuItem(
+                                Icons.archive_outlined, 'Archive', AppColors.textSecondary),
+                          ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: _menuItem(
+                              Icons.delete_outline, 'Delete', AppColors.darkRed),
+                        ),
+                      ],
                     ),
-              onPressed: _bookmarkLoading ? null : _toggleBookmark,
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(right: 16.0),
-          child: GlassmorphicContainer(
-            blur: 10,
-            borderRadius: 12,
-            padding: const EdgeInsets.all(0),
-            child: IconButton(
-              icon: const Icon(Icons.share_outlined,
-                  color: AppColors.white, size: 20),
-              onPressed: () {},
-            ),
-          ),
-        ),
       ],
     );
+  }
+
+  Widget _menuItem(IconData icon, String label, Color color) {
+    return Row(children: [
+      Icon(icon, color: color, size: 18),
+      const SizedBox(width: 10),
+      Text(label, style: AppTextStyles.bodyMedium.copyWith(color: color)),
+    ]);
   }
 
   Widget _buildStartupHeader() {
@@ -432,11 +668,68 @@ class _OpportunityDetailScreenState
                 child: CircularProgressIndicator(
                     color: AppColors.darkRed, strokeWidth: 2)),
           ),
-          error: (_, __) => _applyButton(context),
+          error: (_, _) => _applyButton(context),
           data: (app) {
-            if (app == null) return _applyButton(context);
+            if (app == null) {
+              if (opportunity.status != OpportunityStatus.active) {
+                return _closedBar();
+              }
+              return _applyButton(context);
+            }
             return _applicationStatusPanel(context, app);
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBanner() {
+    final isClosed = opportunity.status == OpportunityStatus.closed;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.textSecondary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderGlass),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isClosed ? Icons.lock_outline : Icons.archive_outlined,
+            color: AppColors.textSecondary,
+            size: 18,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              isClosed
+                  ? 'This opportunity is closed. Applications are no longer accepted.'
+                  : 'This opportunity has been archived.',
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _closedBar() {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        onPressed: null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.glassWhite,
+          disabledBackgroundColor: AppColors.glassWhite,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 0,
+        ),
+        child: Text(
+          opportunity.status == OpportunityStatus.closed
+              ? 'Applications Closed'
+              : 'Opportunity Archived',
+          style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
         ),
       ),
     );

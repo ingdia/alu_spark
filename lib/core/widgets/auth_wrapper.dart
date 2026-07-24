@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:alu_spark/app/router/app_router.dart';
+import 'package:alu_spark/core/constants/app_constants.dart';
 import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/core/providers/role_provider.dart';
 import 'package:alu_spark/features/auth/presentation/screens/app_loading_screen.dart';
@@ -16,8 +16,8 @@ class AuthWrapper extends ConsumerStatefulWidget {
 
 class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   bool _initialDelayDone = false;
-  bool _hasNavigated = false;
-  String? _lastAuthUid; // track identity changes only
+  String? _lastAuthUid;
+  String? _lastDestination;
 
   @override
   void initState() {
@@ -28,8 +28,6 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
   }
 
   void _navigateTo(String routeName) {
-    if (_hasNavigated) return;
-    _hasNavigated = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
@@ -57,46 +55,62 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
         final currentUid = user?.id;
         if (currentUid != _lastAuthUid) {
           _lastAuthUid = currentUid;
-          _hasNavigated = false;
+          _lastDestination = null;
         }
 
         // Not logged in
         if (user == null) {
-          _navigateTo(RouteNames.splash);
+          if (_lastDestination != RouteNames.splash) {
+            _lastDestination = RouteNames.splash;
+            _navigateTo(RouteNames.splash);
+          }
           return const AppLoadingScreen();
         }
 
-        // Email not verified yet — stay put (OTP screen handles this)
-        // Admin bypasses email verification requirement
-        final isAdminEmail = user.email.trim().toLowerCase() == 'ngabirediane02@gmail.com';
-        if (!user.isEmailVerified && !isAdminEmail) {
+        // Email not verified yet — route to the OTP screen, which polls for
+        // verification and can recover. Returning a bare loading screen here
+        // traps the user on an infinite spinner with no way out.
+        // Admin role bypasses email verification requirement.
+        final isAdmin = AppConstants.isAdminEmail(user.email);
+        if (!user.isEmailVerified && !isAdmin) {
+          if (_lastDestination != RouteNames.otpVerification) {
+            _lastDestination = RouteNames.otpVerification;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              Navigator.of(context).pushNamedAndRemoveUntil(
+                RouteNames.otpVerification,
+                (_) => false,
+                arguments: {'email': user.email, 'name': user.fullName},
+              );
+            });
+          }
           return const AppLoadingScreen();
         }
 
-        // Admin email always goes home — no Firestore doc required
-        if (isAdminEmail) {
+        // Hardcoded admin email always goes home — no Firestore doc required
+        if (isAdmin) {
           Future.microtask(() {
             ref.read(roleProvider.notifier).setRole(UserRole.admin);
-            _navigateTo(RouteNames.home);
+            if (_lastDestination != RouteNames.home) {
+              _lastDestination = RouteNames.home;
+              _navigateTo(RouteNames.home);
+            }
           });
           return const AppLoadingScreen();
         }
 
         // Fetch fresh Firestore data to make routing decisions
-        return StreamBuilder<DocumentSnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.id)
-              .snapshots(),
+        return StreamBuilder<Map<String, dynamic>?>(
+          stream: ref.read(authRepositoryProvider).getUserDataStream(user.id),
           builder: (context, snapshot) {
             // Doc missing → treat as incomplete profile
-            if (snapshot.hasData && snapshot.data?.data() == null) {
+            if (snapshot.hasData && snapshot.data == null) {
               _navigateTo(RouteNames.roleSelection);
               return const AppLoadingScreen();
             }
             if (!snapshot.hasData) return const AppLoadingScreen();
 
-            final data = snapshot.data!.data() as Map<String, dynamic>;
+            final data = snapshot.data!;
             final roleStr = data['role'] as String? ?? 'student';
             final profileComplete = data['profileComplete'] as bool? ?? false;
             final startupStatus = data['startupProfileStatus'] as String?;
@@ -106,6 +120,18 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
               (r) => r.name == roleStr,
               orElse: () => UserRole.student,
             );
+
+            // Admin role from Firestore bypasses profile completion check
+            if (role == UserRole.admin) {
+              Future.microtask(() {
+                ref.read(roleProvider.notifier).setRole(UserRole.admin);
+                if (_lastDestination != RouteNames.home) {
+                  _lastDestination = RouteNames.home;
+                  _navigateTo(RouteNames.home);
+                }
+              });
+              return const AppLoadingScreen();
+            }
 
             String destination;
             if (!profileComplete) {
@@ -120,7 +146,10 @@ class _AuthWrapperState extends ConsumerState<AuthWrapper> {
 
             Future.microtask(() {
               ref.read(roleProvider.notifier).setRole(role);
-              _navigateTo(destination);
+              if (destination != _lastDestination) {
+                _lastDestination = destination;
+                _navigateTo(destination);
+              }
             });
             return const AppLoadingScreen();
           },

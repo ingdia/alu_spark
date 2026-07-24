@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:alu_spark/app/router/app_router.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
+import 'package:alu_spark/core/providers/firebase_providers.dart';
 
-class StartupPendingScreen extends StatelessWidget {
+class StartupPendingScreen extends ConsumerWidget {
   const StartupPendingScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final uid = fb.FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
@@ -84,7 +86,7 @@ class StartupPendingScreen extends StatelessWidget {
                     height: 52,
                     child: GestureDetector(
                       onTap: () async {
-                        await fb.FirebaseAuth.instance.signOut();
+                        await ref.read(authRepositoryProvider).signOut();
                         if (context.mounted) {
                           Navigator.of(context).pushNamedAndRemoveUntil(
                             RouteNames.login, (_) => false);

@@ -6,6 +6,7 @@ import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/core/widgets/loading_widget.dart';
 import 'package:alu_spark/core/widgets/empty_state_widget.dart';
 import 'package:alu_spark/core/widgets/error_state_widget.dart';
+import 'package:alu_spark/core/widgets/avatar_widget.dart';
 import 'package:alu_spark/features/startup_profile/presentation/providers/startup_provider.dart';
 import 'package:alu_spark/features/startup_profile/domain/entities/startup.dart';
 import 'package:alu_spark/app/router/app_router.dart';
@@ -56,6 +57,10 @@ class StartupProfileScreen extends ConsumerWidget {
           ),
           actions: [
             IconButton(
+              icon: const Icon(Icons.edit_rounded, color: AppColors.white),
+              onPressed: () => Navigator.of(context).pushNamed(RouteNames.startupProfileEdit),
+            ),
+            IconButton(
               icon: const Icon(Icons.share_outlined, color: AppColors.white),
               // TODO: Share startup profile — no share screen exists. Wire when share functionality is implemented.
               onPressed: () {},
@@ -75,14 +80,13 @@ class StartupProfileScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const SizedBox(height: 40),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.glassWhite,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.borderGlass),
-                      ),
-                      child: const Icon(Icons.business, size: 45, color: AppColors.darkRed),
+                    AvatarWidget(
+                      name: startup.name,
+                      imageUrl: startup.logoUrl,
+                      radius: 44,
+                      borderColor: AppColors.borderGlass,
+                      borderWidth: 1.5,
+                      backgroundColor: AppColors.glassWhite,
                     ),
                     const SizedBox(height: 12),
                     Text(startup.name, style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
@@ -267,7 +271,7 @@ class StartupProfileScreen extends ConsumerWidget {
                 CircleAvatar(
                   backgroundColor: AppColors.darkRed.withValues(alpha: 0.2),
                   child: Text(
-                    (member['name'] ?? '?').substring(0, 1),
+                    AvatarWidget.acronymOf(member['name'] ?? '?'),
                     style: AppTextStyles.bodyLarge.copyWith(color: AppColors.darkRed),
                   ),
                 ),

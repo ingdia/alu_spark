@@ -5,18 +5,16 @@ import 'package:alu_spark/features/bookmarks/domain/repositories/bookmark_reposi
 
 class BookmarkRepositoryImpl implements BookmarkRepository {
   final FirebaseFirestore _firestore;
-  final String _collectionPath = 'bookmarks';
 
   BookmarkRepositoryImpl({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
+  CollectionReference<Map<String, dynamic>> _col(String userId) =>
+      _firestore.collection('bookmarks').doc(userId).collection('opportunities');
+
   @override
   Stream<List<Bookmark>> getBookmarksByUser(String userId) {
-    return _firestore
-        .collection(_collectionPath)
-        .where('userId', isEqualTo: userId)
-        .snapshots()
-        .map((snapshot) {
+    return _col(userId).snapshots().map((snapshot) {
       final list = snapshot.docs
           .map((doc) => BookmarkModel.fromFirestore(doc).toEntity())
           .toList();
@@ -28,7 +26,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   @override
   Future<void> addBookmark(Bookmark bookmark) async {
     final model = BookmarkModel(
-      id: '',
+      id: bookmark.opportunityId,
       userId: bookmark.userId,
       opportunityId: bookmark.opportunityId,
       opportunityTitle: bookmark.opportunityTitle,
@@ -37,22 +35,23 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
       location: bookmark.location,
       createdAt: bookmark.createdAt,
     );
-    await _firestore.collection(_collectionPath).add(model.toFirestore());
+    await _col(bookmark.userId)
+        .doc(bookmark.opportunityId)
+        .set(model.toFirestore());
   }
 
   @override
   Future<void> removeBookmark(String bookmarkId) async {
-    await _firestore.collection(_collectionPath).doc(bookmarkId).delete();
+    // bookmarkId format: "{userId}_{opportunityId}"
+    final parts = bookmarkId.split('_');
+    final userId = parts.first;
+    final opportunityId = parts.sublist(1).join('_');
+    await _col(userId).doc(opportunityId).delete();
   }
 
   @override
   Future<bool> isBookmarked(String userId, String opportunityId) async {
-    final snapshot = await _firestore
-        .collection(_collectionPath)
-        .where('userId', isEqualTo: userId)
-        .where('opportunityId', isEqualTo: opportunityId)
-        .limit(1)
-        .get();
-    return snapshot.docs.isNotEmpty;
+    final doc = await _col(userId).doc(opportunityId).get();
+    return doc.exists;
   }
 }

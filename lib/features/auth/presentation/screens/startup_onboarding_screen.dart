@@ -1,6 +1,6 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/app/router/app_router.dart';
@@ -34,12 +34,14 @@ class _StartupOnboardingScreenState
 
   // Step 2 — Founders
   final _step2Key = GlobalKey<FormState>();
-  final List<_FounderEntry> _founders = [_FounderEntry()];
+  late final List<_FounderEntry> _founders;
+  // Locked values for Founder #1 — read directly from FirebaseAuth synchronously.
+  late final String _founderOneName;
+  late final String _founderOneEmail;
 
-  // Step 3 — Proof document
-  PlatformFile? _proofFile;
+  // Step 3 — Proof document link
+  final _proofLinkController = TextEditingController();
   final _descController = TextEditingController();
-  String? _proofError;
 
   static const _industries = [
     'Technology', 'FinTech', 'HealthTech', 'EdTech',
@@ -49,12 +51,29 @@ class _StartupOnboardingScreenState
   static const _sizes = ['1–5', '6–10', '11–20', '21–50', '50+'];
 
   @override
+  void initState() {
+    super.initState();
+    // Read the current Firebase user synchronously — always available here
+    // because the user must be logged in to reach this screen.
+    final firebaseUser = fb.FirebaseAuth.instance.currentUser;
+    _founderOneName  = firebaseUser?.displayName ?? firebaseUser?.email?.split('@').first ?? '';
+    _founderOneEmail = firebaseUser?.email ?? '';
+
+    // Pre-fill Founder #1 controllers so _submit() can read them normally.
+    final firstEntry = _FounderEntry();
+    firstEntry.nameController.text  = _founderOneName;
+    firstEntry.emailController.text = _founderOneEmail;
+    _founders = [firstEntry];
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
     _startupNameController.dispose();
     _startupTaglineController.dispose();
     _websiteController.dispose();
     _linkedinController.dispose();
+    _proofLinkController.dispose();
     _descController.dispose();
     for (final f in _founders) {
       f.dispose();
@@ -69,7 +88,6 @@ class _StartupOnboardingScreenState
     } else if (next.status == AuthStatus.error) {
       final msg = next.errorMessage ?? 'An error occurred. Please try again.';
       ref.read(authNotifierProvider.notifier).reset();
-      // Show error in a dialog so it can't be missed
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
@@ -77,12 +95,14 @@ class _StartupOnboardingScreenState
           title: Text('Submission Failed',
               style: AppTextStyles.headingMedium.copyWith(fontSize: 16)),
           content: Text(msg,
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textSecondary)),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text('OK',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed)),
+                  style:
+                      AppTextStyles.bodyMedium.copyWith(color: AppColors.darkRed)),
             ),
           ],
         ),
@@ -116,7 +136,8 @@ class _StartupOnboardingScreenState
                     ),
                   ],
                 ),
-                child: const Icon(Icons.check_rounded, color: AppColors.white, size: 36),
+                child: const Icon(Icons.check_rounded,
+                    color: AppColors.white, size: 36),
               ),
               const SizedBox(height: 20),
               Text(
@@ -140,7 +161,7 @@ class _StartupOnboardingScreenState
                 height: 48,
                 child: GestureDetector(
                   onTap: () => Navigator.pushNamedAndRemoveUntil(
-                    context, RouteNames.startupPending, (_) => false),
+                      context, RouteNames.startupPending, (_) => false),
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: AppColors.redGradient,
@@ -165,7 +186,21 @@ class _StartupOnboardingScreenState
 
   void _nextStep() {
     if (_step == 0 && !(_step1Key.currentState?.validate() ?? false)) return;
-    if (_step == 1 && !(_step2Key.currentState?.validate() ?? false)) return;
+    if (_step == 1) {
+      if (!(_step2Key.currentState?.validate() ?? false)) return;
+      if (_founders.length < 2) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Please add at least 2 founders.'),
+            backgroundColor: AppColors.darkRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+        return;
+      }
+    }
     if (_step < 2) {
       setState(() => _step++);
       _pageController.nextPage(
@@ -185,21 +220,32 @@ class _StartupOnboardingScreenState
     }
   }
 
-  Future<void> _pickDocument() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-      withData: true, // ensures bytes are always available
-    );
-    if (result != null) {
-      setState(() {
-        _proofFile = result.files.first;
-        _proofError = null;
-      });
-    }
-  }
-
   void _submit() {
+    final url = _proofLinkController.text.trim();
+    if (url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('A proof document link is required.'),
+          backgroundColor: AppColors.darkRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+      return;
+    }
+    if (!url.startsWith('https://') && !url.startsWith('http://')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please enter a valid URL (must start with https://).'),
+          backgroundColor: AppColors.darkRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+      return;
+    }
     ref.read(authNotifierProvider.notifier).registerStartup(
       startupName: _startupNameController.text.trim(),
       tagline: _startupTaglineController.text.trim(),
@@ -216,9 +262,7 @@ class _StartupOnboardingScreenState
               })
           .toList(),
       description: _descController.text.trim(),
-      proofFilePath: _proofFile?.path,
-      proofFileBytes: _proofFile?.bytes,
-      proofFileName: _proofFile?.name ?? '',
+      proofDocumentUrl: url,
     );
   }
 
@@ -256,7 +300,7 @@ class _StartupOnboardingScreenState
     final subtitles = [
       'Tell us about your startup',
       'Who are the founding team?',
-      'Upload proof for admin review',
+      'Share a link to your proof document',
     ];
 
     return Padding(
@@ -270,7 +314,8 @@ class _StartupOnboardingScreenState
                 blur: 10,
                 borderRadius: 10,
                 padding: const EdgeInsets.all(10),
-                child: const Icon(Icons.arrow_back_ios_new, color: AppColors.white, size: 16),
+                child: const Icon(Icons.arrow_back_ios_new,
+                    color: AppColors.white, size: 16),
               ),
             )
           else
@@ -280,7 +325,8 @@ class _StartupOnboardingScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(titles[_step], style: AppTextStyles.headingMedium.copyWith(fontSize: 20)),
+                Text(titles[_step],
+                    style: AppTextStyles.headingMedium.copyWith(fontSize: 20)),
                 Text(subtitles[_step],
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.textSecondary,
@@ -418,7 +464,7 @@ class _StartupOnboardingScreenState
               return _FounderCard(
                 index: i,
                 entry: f,
-                canRemove: _founders.length > 1,
+                canRemove: _founders.length > 1 && i > 0,
                 onRemove: () => setState(() => _founders.removeAt(i)),
               );
             }),
@@ -433,7 +479,8 @@ class _StartupOnboardingScreenState
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.add_circle_outline, color: AppColors.darkRed, size: 18),
+                      const Icon(Icons.add_circle_outline,
+                          color: AppColors.darkRed, size: 18),
                       const SizedBox(width: 8),
                       Text('Add Another Founder',
                           style: AppTextStyles.bodyMedium.copyWith(
@@ -452,7 +499,7 @@ class _StartupOnboardingScreenState
     );
   }
 
-  // ── Step 3: Proof Document ────────────────────────────────────────────────
+  // ── Step 3: Proof Document Link ───────────────────────────────────────────
   Widget _buildStep3(bool isLoading) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
@@ -501,14 +548,14 @@ class _StartupOnboardingScreenState
           ),
           const SizedBox(height: 20),
 
-          Text('Proof Document (optional)',
+          Text('Proof Document Link *',  // required
               style: AppTextStyles.bodyLarge.copyWith(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               )),
           const SizedBox(height: 6),
           Text(
-            'Upload a business registration certificate, pitch deck, or any official document that verifies your startup.',
+            'Paste a link to your business registration certificate, pitch deck, or any official document that verifies your startup (Google Drive, Dropbox, OneDrive, etc.).',
             style: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.textSecondary,
               fontSize: 12,
@@ -517,69 +564,48 @@ class _StartupOnboardingScreenState
           ),
           const SizedBox(height: 14),
 
-          GestureDetector(
-            onTap: _pickDocument,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 28),
-              decoration: BoxDecoration(
-                color: _proofFile != null
-                    ? AppColors.darkRed.withValues(alpha: 0.08)
-                    : AppColors.glassWhite,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: _proofError != null
-                      ? AppColors.darkRed
-                      : _proofFile != null
-                          ? AppColors.darkRed
-                          : AppColors.borderGlass,
-                  width: (_proofFile != null || _proofError != null) ? 1.5 : 1,
+          GlassmorphicContainer(
+            blur: 10,
+            borderRadius: 14,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: TextFormField(
+              controller: _proofLinkController,
+              keyboardType: TextInputType.url,
+              autocorrect: false,
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.white, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'https://drive.google.com/...',
+                hintStyle: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
                 ),
+                prefixIcon: const Icon(Icons.link_rounded,
+                    color: AppColors.darkRed, size: 20),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              child: Column(
-                children: [
-                  Icon(
-                    _proofFile != null
-                        ? Icons.check_circle_rounded
-                        : Icons.upload_file_rounded,
-                    color: _proofFile != null ? AppColors.darkRed : AppColors.textSecondary,
-                    size: 36,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    _proofFile != null ? _proofFile!.name : 'Tap to upload document',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: _proofFile != null ? AppColors.white : AppColors.textSecondary,
-                      fontWeight: _proofFile != null ? FontWeight.w600 : FontWeight.w400,
-                      fontSize: 13,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'PDF, JPG or PNG • Max 10MB',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Required';
+                final t = v.trim();
+                if (!t.startsWith('https://') && !t.startsWith('http://')) {
+                  return 'Must be a valid URL (https://...)';
+                }
+                return null;
+              },
             ),
           ),
-          if (_proofError != null) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const Icon(Icons.error_outline, color: AppColors.darkRed, size: 14),
-                const SizedBox(width: 6),
-                Text(_proofError!,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.darkRed, fontSize: 12)),
-              ],
-            ),
-          ],
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              _linkChip('Google Drive', Icons.add_to_drive_outlined),
+              _linkChip('Dropbox', Icons.cloud_outlined),
+              _linkChip('OneDrive', Icons.cloud_queue_outlined),
+              _linkChip('Notion', Icons.article_outlined),
+            ],
+          ),
           const SizedBox(height: 20),
 
           GlassmorphicContainer(
@@ -614,6 +640,27 @@ class _StartupOnboardingScreenState
       ),
     );
   }
+
+  Widget _linkChip(String label, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.glassWhite,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderGlass),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: AppColors.textSecondary),
+          const SizedBox(width: 5),
+          Text(label,
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textSecondary, fontSize: 11)),
+        ],
+      ),
+    );
+  }
 }
 
 // ── Founder card ──────────────────────────────────────────────────────────────
@@ -629,6 +676,10 @@ class _FounderCard extends StatelessWidget {
     required this.canRemove,
     required this.onRemove,
   });
+
+  // Founder #1 (index 0) is the logged-in verified ALU user.
+  // Their name and email are locked; only the role is editable.
+  bool get _isLeadFounder => index == 0;
 
   @override
   Widget build(BuildContext context) {
@@ -660,7 +711,7 @@ class _FounderCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  index == 0 ? 'Lead Founder' : 'Co-Founder ${index + 1}',
+                  index == 0 ? 'Lead Founder (You)' : 'Co-Founder ${index + 1}',
                   style: AppTextStyles.bodyLarge.copyWith(
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
@@ -676,33 +727,98 @@ class _FounderCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
-            AuthTextField(
-              controller: entry.nameController,
-              hintText: 'Full Name *',
-              prefixIcon: Icons.person_outline,
-              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-            ),
-            const SizedBox(height: 10),
+
+            // Name
+            if (_isLeadFounder)
+              _ReadOnlyField(
+                label: 'Full Name',
+                value: entry.nameController.text,
+                icon: Icons.person_outline,
+              )
+            else
+              AuthTextField(
+                controller: entry.nameController,
+                hintText: 'Full Name *',
+                prefixIcon: Icons.person_outline,
+                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+              ),
+            const SizedBox(height: 12),
+
+            // Role (editable for everyone)
             AuthTextField(
               controller: entry.roleController,
               hintText: 'Role (e.g. CEO, CTO) *',
               prefixIcon: Icons.work_outline,
               validator: (v) => v == null || v.isEmpty ? 'Required' : null,
             ),
-            const SizedBox(height: 10),
-            AuthTextField(
-              controller: entry.emailController,
-              hintText: 'Email Address *',
-              prefixIcon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Required';
-                if (!v.contains('@')) return 'Enter a valid email';
-                return null;
-              },
-            ),
+            const SizedBox(height: 12),
+
+            // Email
+            if (_isLeadFounder)
+              _ReadOnlyField(
+                label: 'Email',
+                value: entry.emailController.text,
+                icon: Icons.email_outlined,
+              )
+            else
+              AuthTextField(
+                controller: entry.emailController,
+                hintText: 'Email *',
+                prefixIcon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Required';
+                  if (!v.contains('@')) return 'Invalid email';
+                  return null;
+                },
+              ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Read-only display field ───────────────────────────────────────────────────
+class _ReadOnlyField extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+
+  const _ReadOnlyField({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassmorphicContainer(
+      blur: 10,
+      borderRadius: 12,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.textSecondary, size: 18),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary, fontSize: 10)),
+                const SizedBox(height: 2),
+                Text(
+                  value.isEmpty ? '—' : value,
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.lock_outline,
+              color: AppColors.textSecondary, size: 14),
+        ],
       ),
     );
   }
@@ -734,7 +850,8 @@ class _DropdownField extends StatelessWidget {
         initialValue: value,
         dropdownColor: AppColors.darkBlueLight,
         style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
-        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
+        icon: const Icon(Icons.keyboard_arrow_down_rounded,
+            color: AppColors.textSecondary),
         decoration: InputDecoration(
           prefixIcon: Icon(icon, color: AppColors.darkRed, size: 18),
           labelText: label,
@@ -748,7 +865,9 @@ class _DropdownField extends StatelessWidget {
         items: items
             .map((e) => DropdownMenuItem(
                   value: e,
-                  child: Text(e, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white)),
+                  child: Text(e,
+                      style: AppTextStyles.bodyMedium
+                          .copyWith(color: AppColors.white)),
                 ))
             .toList(),
         onChanged: onChanged,
@@ -784,14 +903,21 @@ class _PrimaryButton extends StatelessWidget {
             color: onTap == null ? AppColors.glassWhite : null,
             borderRadius: BorderRadius.circular(14),
             boxShadow: onTap != null
-                ? [BoxShadow(color: AppColors.darkRed.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 8))]
+                ? [
+                    BoxShadow(
+                        color: AppColors.darkRed.withValues(alpha: 0.4),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8))
+                  ]
                 : [],
           ),
           child: Center(
             child: isLoading
                 ? const SizedBox(
-                    width: 22, height: 22,
-                    child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2),
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                        color: AppColors.white, strokeWidth: 2),
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,

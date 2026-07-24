@@ -22,9 +22,10 @@ class NotificationModel {
 
   factory NotificationModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    final userId = data['userId'] as String? ?? '';
     return NotificationModel(
-      id: doc.id,
-      userId: data['userId'] ?? '',
+      id: '${userId}_${doc.id}',
+      userId: userId,
       title: data['title'] ?? '',
       description: data['description'] ?? '',
       type: data['type'] ?? 'system',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
@@ -8,6 +9,78 @@ import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/core/widgets/alu_logo.dart';
 import 'package:alu_spark/features/admin_analytics/presentation/providers/analytics_provider.dart';
 import 'package:alu_spark/features/admin_verification/presentation/providers/verification_provider.dart';
+
+class _ActivityItem {
+  final IconData icon;
+  final String text;
+  final DateTime time;
+  const _ActivityItem({required this.icon, required this.text, required this.time});
+}
+
+final _recentActivityProvider = FutureProvider<List<_ActivityItem>>((ref) async {
+  final firestore = FirebaseFirestore.instance;
+
+  final results = await Future.wait([
+    firestore
+        .collection('users')
+        .orderBy('createdAt', descending: true)
+        .limit(5)
+        .get(),
+    firestore
+        .collection('opportunities')
+        .orderBy('createdAt', descending: true)
+        .limit(5)
+        .get(),
+    firestore
+        .collection('startups')
+        .where('status', whereIn: ['approved', 'rejected'])
+        .orderBy('updatedAt', descending: true)
+        .limit(5)
+        .get(),
+  ]);
+
+  final items = <_ActivityItem>[];
+
+  for (final doc in results[0].docs) {
+    final d = doc.data();
+    final ts = d['createdAt'] as Timestamp?;
+    if (ts == null) continue;
+    final role = d['role'] as String? ?? 'student';
+    final name = d['fullName'] as String? ?? 'Someone';
+    items.add(_ActivityItem(
+      icon: role == 'founder' ? Icons.rocket_launch_outlined : Icons.person_add_outlined,
+      text: '$name joined as a ${role[0].toUpperCase()}${role.substring(1)}',
+      time: ts.toDate(),
+    ));
+  }
+
+  for (final doc in results[1].docs) {
+    final d = doc.data();
+    final ts = d['createdAt'] as Timestamp?;
+    if (ts == null) continue;
+    items.add(_ActivityItem(
+      icon: Icons.add_circle_outline,
+      text: 'New opportunity: "${d['title'] ?? 'Untitled'}" at ${d['startupName'] ?? ''}',
+      time: ts.toDate(),
+    ));
+  }
+
+  for (final doc in results[2].docs) {
+    final d = doc.data();
+    final ts = d['updatedAt'] as Timestamp?;
+    if (ts == null) continue;
+    final status = d['status'] as String? ?? '';
+    final name = d['startupName'] ?? d['name'] ?? 'A startup';
+    items.add(_ActivityItem(
+      icon: status == 'approved' ? Icons.verified_outlined : Icons.cancel_outlined,
+      text: '$name verification $status',
+      time: ts.toDate(),
+    ));
+  }
+
+  items.sort((a, b) => b.time.compareTo(a.time));
+  return items.take(5).toList();
+});
 
 class AdminHomeScreen extends ConsumerWidget {
   const AdminHomeScreen({super.key});
@@ -29,7 +102,7 @@ class AdminHomeScreen extends ConsumerWidget {
               const SizedBox(height: 24),
               statsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator(color: AppColors.darkRed)),
-                error: (_, __) => _buildPlatformStatsStatic(),
+                error: (_, _) => _buildPlatformStatsStatic(),
                 data: (stats) => _buildPlatformStatsLive(
                   students: stats.totalStudents,
                   founders: stats.totalFounders,
@@ -44,7 +117,7 @@ class AdminHomeScreen extends ConsumerWidget {
               const SizedBox(height: 32),
               _buildSectionHeader('Recent Activity'),
               const SizedBox(height: 16),
-              _buildRecentActivity(),
+              _buildRecentActivityLive(ref),
               const SizedBox(height: 20),
             ],
           ),
@@ -196,42 +269,68 @@ class AdminHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRecentActivity() {
-    final activities = [
-      {'icon': Icons.verified_outlined, 'text': 'EcoTech Solutions submitted for verification', 'time': '2m ago'},
-      {'icon': Icons.person_add_outlined, 'text': 'Sarah Lee joined as a Student', 'time': '1h ago'},
-      {'icon': Icons.add_circle_outline, 'text': 'New opportunity posted at DesignHub', 'time': '3h ago'},
-      {'icon': Icons.cancel_outlined, 'text': 'EduConnect verification rejected', 'time': '5h ago'},
-    ];
-
-    return Column(
-      children: activities.map((act) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: GlassmorphicContainer(
+  Widget _buildRecentActivityLive(WidgetRef ref) {
+    return ref.watch(_recentActivityProvider).when(
+      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.darkRed)),
+      error: (_, _) => GestureDetector(
+        onTap: () => ref.invalidate(_recentActivityProvider),
+        child: GlassmorphicContainer(
+          blur: 10,
+          borderRadius: 16,
+          padding: const EdgeInsets.all(16),
+          child: Text('Failed to load. Tap to retry.',
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+        ),
+      ),
+      data: (items) {
+        if (items.isEmpty) {
+          return GlassmorphicContainer(
             blur: 10,
             borderRadius: 16,
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.darkRed.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(act['icon'] as IconData, color: AppColors.darkRed, size: 20),
+            padding: const EdgeInsets.all(16),
+            child: Text('No recent activity.',
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+          );
+        }
+        return Column(
+          children: items.map((act) {
+            final diff = DateTime.now().difference(act.time);
+            final timeLabel = diff.inMinutes < 60
+                ? '${diff.inMinutes}m ago'
+                : diff.inHours < 24
+                    ? '${diff.inHours}h ago'
+                    : '${diff.inDays}d ago';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: GlassmorphicContainer(
+                blur: 10,
+                borderRadius: 16,
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.darkRed.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(act.icon, color: AppColors.darkRed, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(act.text,
+                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white)),
+                    ),
+                    Text(timeLabel,
+                        style: AppTextStyles.bodyMedium
+                            .copyWith(color: AppColors.textSecondary, fontSize: 11)),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(act['text'] as String, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white)),
-                ),
-                Text(act['time'] as String, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary, fontSize: 11)),
-              ],
-            ),
-          ),
+              ),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
     );
   }
 }

@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/router/app_router.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
+import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 
-class OtpVerificationScreen extends StatefulWidget {
+class OtpVerificationScreen extends ConsumerStatefulWidget {
   final String email;
   final String name;
 
@@ -18,10 +18,10 @@ class OtpVerificationScreen extends StatefulWidget {
   });
 
   @override
-  State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
+  ConsumerState<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
 }
 
-class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
+class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   bool _isChecking = false;
   bool _isResending = false;
   bool _canResend = false;
@@ -65,10 +65,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   Future<void> _checkVerification({bool silent = false}) async {
     if (!silent) setState(() => _isChecking = true);
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final authService = ref.read(firebaseAuthServiceProvider);
+      final user = authService.currentUser;
       if (user == null) return;
       await user.reload();
-      final fresh = FirebaseAuth.instance.currentUser;
+      final fresh = authService.currentUser;
       if (fresh != null && fresh.emailVerified) {
         // Force-refresh the ID token so Firestore sees email_verified = true
         await fresh.getIdToken(true);
@@ -88,24 +89,30 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   void _goToProfileSetup() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid != null) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .update({'isEmailVerified': true});
-    }
+    // Persist the verified flag, then refresh the auth stream so AuthWrapper
+    // re-reads a fresh (verified) user. Routing through the root ('/') handles
+    // BOTH a brand-new registrant (→ role selection) and a returning user who
+    // just verified on a cold start (→ home / startup-pending) — the wrapper
+    // decides based on their Firestore profile, so we don't hardcode it here.
+    await ref.read(authRepositoryProvider).markEmailVerified();
+    ref.invalidate(authStateProvider);
     if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      RouteNames.roleSelection,
+    Navigator.of(context).pushAndRemoveUntil(
+      AppRouter.generateRoute(const RouteSettings(name: '/')),
       (_) => false,
     );
+  }
+
+  Future<void> _signOut() async {
+    await ref.read(authRepositoryProvider).signOut();
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil(RouteNames.login, (_) => false);
   }
 
   Future<void> _resendEmail() async {
     setState(() => _isResending = true);
     try {
-      await FirebaseAuth.instance.currentUser?.sendEmailVerification();
+      await ref.read(firebaseAuthServiceProvider).currentUser?.sendEmailVerification();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Verification email resent!')),
@@ -213,6 +220,24 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                         ],
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Escape hatch: never trap a user on this screen. If the email
+                // genuinely isn't verified (wrong account, no inbox access, an
+                // admin-created record, etc.) they can sign out and return to
+                // login instead of being stuck.
+                Center(
+                  child: TextButton(
+                    onPressed: _signOut,
+                    child: Text(
+                      'Use a different account',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
                   ),
                 ),
               ],

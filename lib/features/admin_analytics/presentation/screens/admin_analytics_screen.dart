@@ -44,12 +44,12 @@ class AdminAnalyticsScreen extends ConsumerWidget {
           message: error.toString(),
           onRetry: () => ref.invalidate(platformStatsProvider),
         ),
-        data: (stats) => _buildContent(context, stats),
+        data: (stats) => _buildContent(stats),
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context, PlatformStats stats) {
+  Widget _buildContent(PlatformStats stats) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -57,13 +57,15 @@ class AdminAnalyticsScreen extends ConsumerWidget {
         children: [
           _buildSummaryStats(stats),
           const SizedBox(height: 32),
-          _buildSectionTitle('Platform Growth'),
+          Text('Applications by Status',
+              style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
           const SizedBox(height: 12),
-          _buildGrowthChartPlaceholder(),
+          _buildBreakdown(stats.applicationsByStatus, _statusColor),
           const SizedBox(height: 32),
-          _buildSectionTitle('Top Categories'),
+          Text('Opportunities by Category',
+              style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
           const SizedBox(height: 12),
-          _buildTopCategoriesPlaceholder(),
+          _buildBreakdown(stats.opportunitiesByCategory, (_) => AppColors.darkRed),
           const SizedBox(height: 20),
         ],
       ),
@@ -109,62 +111,87 @@ class AdminAnalyticsScreen extends ConsumerWidget {
             child: Icon(icon, color: AppColors.darkRed, size: 20),
           ),
           const SizedBox(height: 12),
-          Text(
-            value,
-            style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
-          ),
+          Text(value, style: AppTextStyles.headingMedium.copyWith(color: AppColors.white)),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
-          ),
+          Text(label, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
         ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: AppTextStyles.headingMedium.copyWith(color: AppColors.white),
-    );
-  }
+  Widget _buildBreakdown(Map<String, int> data, Color Function(String) colorFn) {
+    if (data.isEmpty) {
+      return GlassmorphicContainer(
+        blur: 10,
+        borderRadius: 16,
+        padding: const EdgeInsets.all(20),
+        child: Center(
+          child: Text('No data yet.',
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+        ),
+      );
+    }
 
-  Widget _buildGrowthChartPlaceholder() {
+    final total = data.values.fold(0, (a, b) => a + b);
+    final sorted = data.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+
     return GlassmorphicContainer(
       blur: 10,
       borderRadius: 16,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       child: Column(
-        children: [
-          Icon(Icons.bar_chart, color: AppColors.textSecondary, size: 48),
-          const SizedBox(height: 12),
-          Text(
-            'Growth chart visualization coming soon',
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
-            textAlign: TextAlign.center,
-          ),
-        ],
+        children: sorted.map((entry) {
+          final pct = total > 0 ? entry.value / total : 0.0;
+          final color = colorFn(entry.key);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(_formatLabel(entry.key),
+                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white)),
+                    Text('${entry.value}  ${(pct * 100).toStringAsFixed(0)}%',
+                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: pct,
+                    minHeight: 6,
+                    backgroundColor: AppColors.glassWhite,
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
       ),
     );
   }
 
-  Widget _buildTopCategoriesPlaceholder() {
-    return GlassmorphicContainer(
-      blur: 10,
-      borderRadius: 16,
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          Icon(Icons.category, color: AppColors.textSecondary, size: 48),
-          const SizedBox(height: 12),
-          Text(
-            'Category breakdown coming soon',
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
+  String _formatLabel(String raw) {
+    switch (raw) {
+      case 'underReview': return 'Under Review';
+      default:
+        return raw.isEmpty ? 'Unknown' : raw[0].toUpperCase() + raw.substring(1);
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'applied': return const Color(0xFF60A5FA);
+      case 'underReview': return const Color(0xFFFBBF24);
+      case 'interview': return AppColors.darkRedLight;
+      case 'accepted': return const Color(0xFF34D399);
+      case 'rejected':
+      case 'withdrawn': return AppColors.textSecondary;
+      default: return AppColors.darkRed;
+    }
   }
 }

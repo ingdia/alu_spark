@@ -6,4 +6,5 @@ abstract class StartupRepository {
   Future<void> createStartup(Startup startup);
   Future<void> updateStartup(Startup startup);
   Future<void> verifyStartup(String startupId, bool isVerified);
+  Future<void> updateLogoUrl(String startupId, String? logoUrl);
 }

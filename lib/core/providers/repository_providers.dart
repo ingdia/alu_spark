@@ -10,7 +10,6 @@ import 'package:alu_spark/features/admin_user_management/domain/repositories/use
 import 'package:alu_spark/features/admin_analytics/data/repositories/analytics_repository_impl.dart';
 import 'package:alu_spark/features/admin_analytics/domain/repositories/analytics_repository.dart';
 import 'package:alu_spark/features/messaging/data/repositories/message_repository_impl.dart';
-import 'package:alu_spark/features/messaging/data/repositories/local_message_store.dart';
 import 'package:alu_spark/features/messaging/domain/repositories/message_repository.dart';
 import 'package:alu_spark/features/notifications/data/repositories/notification_repository_impl.dart';
 import 'package:alu_spark/features/notifications/domain/repositories/notification_repository.dart';
@@ -20,6 +19,8 @@ import 'package:alu_spark/features/bookmarks/data/repositories/bookmark_reposito
 import 'package:alu_spark/features/bookmarks/domain/repositories/bookmark_repository.dart';
 import 'package:alu_spark/core/services/notification_service.dart';
 import 'package:alu_spark/core/services/messaging_service.dart';
+import 'package:alu_spark/features/messaging/data/repositories/room_repository_impl.dart';
+import 'package:alu_spark/features/messaging/domain/repositories/room_repository.dart';
 
 final opportunityRepositoryProvider = Provider<OpportunityRepository>((ref) => OpportunityRepositoryImpl());
 final notificationServiceProvider = Provider<NotificationService>((ref) => NotificationService());
@@ -30,10 +31,7 @@ final applicationRepositoryProvider = Provider<ApplicationRepository>((ref) {
 final startupRepositoryProvider = Provider<StartupRepository>((ref) => StartupRepositoryImpl());
 final userRepositoryProvider = Provider<UserRepository>((ref) => UserRepositoryImpl());
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) => AnalyticsRepositoryImpl());
-final messageRepositoryProvider = Provider<MessageRepository>((ref) {
-  final store = ref.watch(localMessageStoreProvider);
-  return MessageRepositoryImpl(store);
-});
+final messageRepositoryProvider = Provider<MessageRepository>((ref) => MessageRepositoryImpl());
 final messagingServiceProvider = Provider<MessagingService>((ref) => MessagingService());
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) => NotificationRepositoryImpl());
 
@@ -42,3 +40,5 @@ final studentRepositoryProvider = Provider<StudentRepository>((ref) => StudentRe
 final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
   return BookmarkRepositoryImpl();
 });
+
+final roomRepositoryProvider = Provider<RoomRepository>((ref) => RoomRepositoryImpl());

@@ -5,6 +5,7 @@ import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/core/providers/repository_providers.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
+import 'package:alu_spark/core/widgets/profile_image_picker.dart';
 import 'package:alu_spark/features/student_profile/domain/entities/student.dart';
 import 'package:alu_spark/features/student_profile/presentation/providers/student_profile_provider.dart';
 
@@ -26,9 +27,18 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
   List<Map<String, String>> _education = [];
   List<Map<String, String>> _experience = [];
 
+  // Persistent controllers for list editors — keyed by "edu_i_key" / "exp_i_key"
+  final Map<String, TextEditingController> _listControllers = {};
+
+  TextEditingController _listCtrl(String prefix, int index, String key, String initialValue) {
+    final id = '${prefix}_${index}_$key';
+    return _listControllers.putIfAbsent(id, () => TextEditingController(text: initialValue));
+  }
+
   bool _loading = true;
   bool _saving = false;
   String? _uid;
+  String? _profileImageUrl;
 
   @override
   void initState() {
@@ -49,6 +59,7 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
         _skills = List.from(student.skills);
         _education = student.education.map((e) => Map<String, String>.from(e)).toList();
         _experience = student.experience.map((e) => Map<String, String>.from(e)).toList();
+        _profileImageUrl = student.profileImageUrl;
         _loading = false;
       });
     } else {
@@ -71,6 +82,7 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
         skills: _skills,
         education: _education,
         experience: _experience,
+        profileImageUrl: _profileImageUrl,
       );
       await ref.read(studentRepositoryProvider).saveStudent(student);
       ref.invalidate(studentProfileProvider(_uid!));
@@ -93,6 +105,9 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
     _universityController.dispose();
     _bioController.dispose();
     _skillInputController.dispose();
+    for (final c in _listControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -146,6 +161,36 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Profile image picker
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 28),
+                child: ProfileImagePicker(
+                  currentImageUrl: _profileImageUrl,
+                  initials: _nameController.text.isNotEmpty
+                      ? _nameController.text[0].toUpperCase()
+                      : '?',
+                  onUrlSaved: (url) async {
+                    setState(() => _profileImageUrl = url);
+                    if (_uid != null) {
+                      await ref
+                          .read(studentRepositoryProvider)
+                          .updateProfileImageUrl(_uid!, url);
+                      ref.invalidate(studentProfileProvider(_uid!));
+                    }
+                  },
+                  onRemoved: () async {
+                    setState(() => _profileImageUrl = null);
+                    if (_uid != null) {
+                      await ref
+                          .read(studentRepositoryProvider)
+                          .updateProfileImageUrl(_uid!, null);
+                      ref.invalidate(studentProfileProvider(_uid!));
+                    }
+                  },
+                ),
+              ),
+            ),
             _sectionTitle('Basic Information'),
             const SizedBox(height: 16),
             _glassField(_nameController, 'Full Name', Icons.person_outline),
@@ -165,22 +210,30 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
             _sectionTitle('Education'),
             const SizedBox(height: 16),
             _buildListEditor(
+              prefix: 'edu',
               items: _education,
               titleKey: 'degree',
               subtitleKey: 'institution',
               onAdd: () => setState(() => _education.add({'degree': '', 'institution': '', 'period': ''})),
-              onRemove: (i) => setState(() => _education.removeAt(i)),
+              onRemove: (i) => setState(() {
+                _education.removeAt(i);
+                _listControllers.removeWhere((k, _) => k.startsWith('edu_$i'));
+              }),
               addLabel: 'Add Education',
             ),
             const SizedBox(height: 28),
             _sectionTitle('Experience'),
             const SizedBox(height: 16),
             _buildListEditor(
+              prefix: 'exp',
               items: _experience,
               titleKey: 'role',
               subtitleKey: 'company',
               onAdd: () => setState(() => _experience.add({'role': '', 'company': '', 'period': ''})),
-              onRemove: (i) => setState(() => _experience.removeAt(i)),
+              onRemove: (i) => setState(() {
+                _experience.removeAt(i);
+                _listControllers.removeWhere((k, _) => k.startsWith('exp_$i'));
+              }),
               addLabel: 'Add Experience',
             ),
             const SizedBox(height: 40),
@@ -293,6 +346,7 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
   }
 
   Widget _buildListEditor({
+    required String prefix,
     required List<Map<String, String>> items,
     required String titleKey,
     required String subtitleKey,
@@ -313,13 +367,13 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
               padding: const EdgeInsets.all(14),
               child: Column(
                 children: [
-                  _inlineField(item, titleKey, titleKey == 'degree' ? 'Degree / Certificate' : 'Role / Position'),
+                  _inlineField(prefix, i, item, titleKey, titleKey == 'degree' ? 'Degree / Certificate' : 'Role / Position'),
                   const SizedBox(height: 8),
-                  _inlineField(item, subtitleKey, subtitleKey == 'institution' ? 'Institution' : 'Company'),
+                  _inlineField(prefix, i, item, subtitleKey, subtitleKey == 'institution' ? 'Institution' : 'Company'),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Expanded(child: _inlineField(item, 'period', 'Period (e.g. 2023 - 2025)')),
+                      Expanded(child: _inlineField(prefix, i, item, 'period', 'Period (e.g. 2023 - 2025)')),
                       IconButton(
                         icon: const Icon(Icons.delete_outline, color: AppColors.darkRed, size: 20),
                         onPressed: () => onRemove(i),
@@ -348,10 +402,10 @@ class _StudentProfileEditScreenState extends ConsumerState<StudentProfileEditScr
     );
   }
 
-  Widget _inlineField(Map<String, String> map, String key, String hint) {
+  Widget _inlineField(String prefix, int index, Map<String, String> map, String key, String hint) {
+    final controller = _listCtrl(prefix, index, key, map[key] ?? '');
     return TextField(
-      controller: TextEditingController(text: map[key])
-        ..addListener(() {}),
+      controller: controller,
       style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white, fontSize: 13),
       decoration: InputDecoration(
         hintText: hint,

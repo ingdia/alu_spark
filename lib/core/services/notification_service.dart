@@ -18,7 +18,11 @@ class NotificationService {
     String? relatedId,
   }) async {
     try {
-      await _firestore.collection(_col).add({
+      await _firestore
+          .collection(_col)
+          .doc(userId)
+          .collection('items')
+          .add({
         'userId': userId,
         'title': title,
         'description': body,
@@ -150,6 +154,23 @@ class NotificationService {
         userId: id,
         title: 'Opportunity Closed',
         body: 'The opportunity "$opportunityTitle" has been closed.',
+        type: 'system',
+        relatedId: opportunityId,
+      );
+    }
+  }
+
+  /// Opportunity archived → notify all applicants.
+  Future<void> notifyOpportunityArchived({
+    required List<String> studentIds,
+    required String opportunityTitle,
+    String? opportunityId,
+  }) async {
+    for (final id in studentIds) {
+      await _create(
+        userId: id,
+        title: 'Opportunity No Longer Available',
+        body: 'The opportunity "$opportunityTitle" has been archived.',
         type: 'system',
         relatedId: opportunityId,
       );

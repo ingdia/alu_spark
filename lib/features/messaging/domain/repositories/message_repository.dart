@@ -6,7 +6,17 @@ abstract class MessageRepository {
   Stream<List<Message>> getMessages(String conversationId);
   Stream<Conversation?> getConversationById(String conversationId);
   Future<void> sendMessage(Message message);
+  /// Sends an attachment message (URL-based, consistent with app-wide media policy).
+  Future<void> sendAttachment({
+    required String conversationId,
+    required String senderId,
+    required String senderName,
+    required String attachmentUrl,
+    required String attachmentName,
+  });
   Future<void> markAsRead(String conversationId, String userId);
+  /// Called when the recipient's device first receives messages — marks single-tick → double-tick.
+  Future<void> markDelivered(String conversationId, String userId);
   Future<void> setTyping(String conversationId, String userId, bool isTyping);
   Future<void> updateLastSeen(String conversationId, String userId);
   Future<String> getOrCreateConversation({
@@ -18,8 +28,6 @@ abstract class MessageRepository {
     String? opportunityTitle,
     String? applicationId,
   });
-  /// Called automatically when an application moves to Interview status.
-  /// Creates the conversation and seeds it with a system + interview message.
   Future<String> openConversationForInterview({
     required String founderId,
     required String founderName,

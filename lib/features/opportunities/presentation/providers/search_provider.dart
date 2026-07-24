@@ -1,100 +1,151 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/core/providers/repository_providers.dart';
 import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
+import 'package:alu_spark/features/opportunities/domain/repositories/opportunity_repository.dart';
+
+enum SearchSortOrder { newest, oldest, deadline }
 
 class SearchState {
   final String query;
   final String selectedCategory;
   final String selectedLocation;
   final String selectedType;
-  final List<String> categories;
-  final List<String> locations;
-  final List<String> types;
-  final List<Opportunity> allOpportunities;
+  final String selectedSalary;
+  final SearchSortOrder sortOrder;
+  final List<String> recentSearches;
+
+  static const categories = ['All', 'Tech', 'Design', 'Marketing', 'Business', 'Finance'];
+  static const locations = ['Anywhere', 'Kigali', 'Remote', 'Nairobi', 'Cape Town', 'Lagos'];
+  static const types = ['Any', 'Internship', 'Part-time', 'Full-time', 'Freelance'];
+  static const salaryRanges = ['Any', 'Paid', 'Unpaid'];
 
   const SearchState({
     this.query = '',
     this.selectedCategory = 'All',
     this.selectedLocation = 'Anywhere',
     this.selectedType = 'Any',
-    this.categories = const ['All', 'Tech', 'Design', 'Marketing', 'Business', 'Finance'],
-    this.locations = const ['Anywhere', 'Kigali', 'Remote', 'Nairobi', 'Cape Town'],
-    this.types = const ['Any', 'Internship', 'Part-time', 'Full-time', 'Freelance'],
-    this.allOpportunities = const [],
+    this.selectedSalary = 'Any',
+    this.sortOrder = SearchSortOrder.newest,
+    this.recentSearches = const [],
   });
 
-  List<Opportunity> get results {
-    return allOpportunities.where((o) {
-      final matchesQuery = query.isEmpty ||
-          o.title.toLowerCase().contains(query.toLowerCase()) ||
-          o.startupName.toLowerCase().contains(query.toLowerCase());
-      final matchesLocation = selectedLocation == 'Anywhere' ||
-          o.location.toLowerCase().contains(selectedLocation.toLowerCase());
-      final matchesType = selectedType == 'Any' ||
-          o.type.toLowerCase().contains(selectedType.toLowerCase());
-      return matchesQuery && matchesLocation && matchesType;
-    }).toList();
-  }
+  bool get hasActiveFilters =>
+      selectedCategory != 'All' ||
+      selectedLocation != 'Anywhere' ||
+      selectedType != 'Any' ||
+      selectedSalary != 'Any' ||
+      query.isNotEmpty;
+
+  /// Firestore-level filters (equality only — safe without composite indexes).
+  OpportunitySearchFilters get firestoreFilters => OpportunitySearchFilters(
+        category: selectedCategory == 'All' ? null : selectedCategory,
+        location: selectedLocation == 'Anywhere' ? null : selectedLocation,
+        type: selectedType == 'Any' ? null : selectedType,
+      );
 
   SearchState copyWith({
     String? query,
     String? selectedCategory,
     String? selectedLocation,
     String? selectedType,
-    List<Opportunity>? allOpportunities,
-  }) {
-    return SearchState(
-      query: query ?? this.query,
-      selectedCategory: selectedCategory ?? this.selectedCategory,
-      selectedLocation: selectedLocation ?? this.selectedLocation,
-      selectedType: selectedType ?? this.selectedType,
-      categories: categories,
-      locations: locations,
-      types: types,
-      allOpportunities: allOpportunities ?? this.allOpportunities,
-    );
-  }
+    String? selectedSalary,
+    SearchSortOrder? sortOrder,
+    List<String>? recentSearches,
+  }) =>
+      SearchState(
+        query: query ?? this.query,
+        selectedCategory: selectedCategory ?? this.selectedCategory,
+        selectedLocation: selectedLocation ?? this.selectedLocation,
+        selectedType: selectedType ?? this.selectedType,
+        selectedSalary: selectedSalary ?? this.selectedSalary,
+        sortOrder: sortOrder ?? this.sortOrder,
+        recentSearches: recentSearches ?? this.recentSearches,
+      );
 }
 
 class SearchNotifier extends Notifier<SearchState> {
+  static const int _maxRecent = 8;
+
   @override
-  SearchState build() {
-    // ref.watch on a StreamProvider — Riverpod manages the subscription
-    // lifetime automatically. No manual listen() / cancel() needed.
-    final opportunitiesAsync = ref.watch(
-      // Reuse the existing autoDispose stream provider so we share the
-      // single Firestore listener already open for DiscoverScreen.
-      _allOpportunitiesProvider,
-    );
-
-    opportunitiesAsync.whenData((list) {
-      // Only update if the list actually changed to avoid spurious rebuilds.
-      if (state.allOpportunities != list) {
-        state = state.copyWith(allOpportunities: list);
-      }
-    });
-
-    return const SearchState();
-  }
+  SearchState build() => const SearchState();
 
   void setQuery(String query) => state = state.copyWith(query: query);
-  void setCategory(String category) => state = state.copyWith(selectedCategory: category);
-  void setLocation(String location) => state = state.copyWith(selectedLocation: location);
-  void setType(String type) => state = state.copyWith(selectedType: type);
+
+  void commitSearch(String query) {
+    final q = query.trim();
+    if (q.isEmpty) return;
+    final updated = [q, ...state.recentSearches.where((s) => s != q)]
+        .take(_maxRecent)
+        .toList();
+    state = state.copyWith(query: q, recentSearches: updated);
+  }
+
+  void removeRecentSearch(String query) => state = state.copyWith(
+        recentSearches: state.recentSearches.where((s) => s != query).toList(),
+      );
+
+  void clearRecentSearches() => state = state.copyWith(recentSearches: []);
+
+  void setCategory(String v) => state = state.copyWith(selectedCategory: v);
+  void setLocation(String v) => state = state.copyWith(selectedLocation: v);
+  void setType(String v) => state = state.copyWith(selectedType: v);
+  void setSalary(String v) => state = state.copyWith(selectedSalary: v);
+  void setSortOrder(SearchSortOrder v) => state = state.copyWith(sortOrder: v);
+
   void reset() => state = state.copyWith(
         query: '',
         selectedCategory: 'All',
         selectedLocation: 'Anywhere',
         selectedType: 'Any',
+        selectedSalary: 'Any',
+        sortOrder: SearchSortOrder.newest,
       );
 }
 
-// Private provider — shares the Firestore stream with DiscoverScreen's
-// recentOpportunitiesProvider without opening a second listener.
-final _allOpportunitiesProvider = StreamProvider.autoDispose<List<Opportunity>>((ref) {
-  return ref.watch(opportunityRepositoryProvider).getOpportunities();
-});
+final searchProvider = NotifierProvider<SearchNotifier, SearchState>(SearchNotifier.new);
 
-final searchProvider = NotifierProvider<SearchNotifier, SearchState>(
-  SearchNotifier.new,
-);
+/// Streams results from Firestore using equality filters, then applies
+/// client-side text search, salary filter, and sort.
+final searchResultsProvider = StreamProvider.autoDispose<List<Opportunity>>((ref) {
+  final state = ref.watch(searchProvider);
+  final repo = ref.watch(opportunityRepositoryProvider);
+
+  return repo.searchOpportunities(state.firestoreFilters).map((list) {
+    // Client-side: text search
+    var filtered = list.where((o) {
+      final q = state.query.toLowerCase();
+      if (q.isEmpty) return true;
+      return o.title.toLowerCase().contains(q) ||
+          o.startupName.toLowerCase().contains(q) ||
+          o.description.toLowerCase().contains(q) ||
+          o.requirements.any((r) => r.toLowerCase().contains(q));
+    }).toList();
+
+    // Client-side: salary filter
+    if (state.selectedSalary != 'Any') {
+      filtered = filtered.where((o) {
+        final paid = o.salary != null &&
+            o.salary!.isNotEmpty &&
+            !o.salary!.toLowerCase().contains('unpaid');
+        return state.selectedSalary == 'Paid' ? paid : !paid;
+      }).toList();
+    }
+
+    // Sort
+    switch (state.sortOrder) {
+      case SearchSortOrder.newest:
+        filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      case SearchSortOrder.oldest:
+        filtered.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      case SearchSortOrder.deadline:
+        filtered.sort((a, b) {
+          if (a.deadline == null && b.deadline == null) return 0;
+          if (a.deadline == null) return 1;
+          if (b.deadline == null) return -1;
+          return a.deadline!.compareTo(b.deadline!);
+        });
+    }
+
+    return filtered;
+  });
+});

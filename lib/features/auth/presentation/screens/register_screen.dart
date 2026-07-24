@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
+import 'package:alu_spark/core/constants/app_constants.dart';
 import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
 import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/app/router/app_router.dart';
@@ -19,6 +20,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -78,7 +80,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ],
         ),
-        backgroundColor: isError ? AppColors.darkRed : const Color(0xFF1B5E20),
+        backgroundColor: isError ? AppColors.darkRed : AppColors.successGreen,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
@@ -103,6 +105,31 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 Text('Create Account', style: AppTextStyles.headingLarge.copyWith(color: AppColors.white)),
                 const SizedBox(height: 8),
                 Text('Join the ALU Spark community', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.darkRed.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.darkRed.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: AppColors.darkRed, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'This platform is exclusively for ALU community members. You must register with your official ALU email address.',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 40),
                 GlassmorphicContainer(
                   blur: 10,
@@ -130,7 +157,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     keyboardType: TextInputType.emailAddress,
                     style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
                     decoration: InputDecoration(
-                      hintText: 'Email Address',
+                      hintText: 'yourname@alustudent.com',
                       hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                       prefixIcon: const Icon(Icons.email_outlined, color: AppColors.darkRed),
                       border: InputBorder.none,
@@ -138,6 +165,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     validator: (value) {
                       if (value == null || value.isEmpty) return 'Please enter your email';
                       if (!value.contains('@')) return 'Please enter a valid email';
+                      if (!AppConstants.isAluEmail(value)) {
+                        return 'Only verified ALU email addresses can register.';
+                      }
                       return null;
                     },
                   ),
@@ -149,17 +179,25 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: TextFormField(
                     controller: _passwordController,
-                    obscureText: true,
+                    obscureText: _obscurePassword,
                     style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
                     decoration: InputDecoration(
                       hintText: 'Password',
                       hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                       prefixIcon: const Icon(Icons.lock_outline, color: AppColors.darkRed),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          color: AppColors.textSecondary,
+                          size: 20,
+                        ),
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      ),
                       border: InputBorder.none,
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) return 'Please enter your password';
-                      if (value.length < 6) return 'Password must be at least 6 characters';
+                      if (value.length < 8) return 'Password must be at least 8 characters';
                       return null;
                     },
                   ),
@@ -182,6 +220,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           )
                         : Text('Create Account', style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white)),
                   ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Already have an account? ',
+                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pushReplacementNamed(RouteNames.login),
+                      child: Text('Sign In',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.darkRed,
+                            fontWeight: FontWeight.w600,
+                          )),
+                    ),
+                  ],
                 ),
               ],
             ),

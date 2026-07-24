@@ -23,4 +23,12 @@ class StudentRepositoryImpl implements StudentRepository {
           SetOptions(merge: true),
         );
   }
+
+  @override
+  Future<void> updateProfileImageUrl(String uid, String? imageUrl) async {
+    await _firestore.collection(_collection).doc(uid).set(
+          {'profileImageUrl': imageUrl},
+          SetOptions(merge: true),
+        );
+  }
 }

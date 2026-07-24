@@ -1,12 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:alu_spark/core/providers/repository_providers.dart';
 
 class ChatNotifier extends Notifier<AsyncValue<String?>> {
   @override
   AsyncValue<String?> build() => const AsyncData(null);
 
-  /// Creates or retrieves an existing conversation between [currentUserId] and [contactId].
-  /// Returns the conversation document ID.
   Future<String> getOrCreateConversation({
     required String currentUserId,
     required String contactId,
@@ -15,24 +13,14 @@ class ChatNotifier extends Notifier<AsyncValue<String?>> {
   }) async {
     state = const AsyncLoading();
     try {
-      final ids = [currentUserId, contactId]..sort();
-      final conversationId = '${ids[0]}_${ids[1]}';
-      final ref = FirebaseFirestore.instance
-          .collection('conversations')
-          .doc(conversationId);
-
-      final doc = await ref.get();
-      if (!doc.exists) {
-        await ref.set({
-          'participantIds': [currentUserId, contactId],
-          'participantName': contactName,
-          'lastMessage': '',
-          'lastMessageTime': FieldValue.serverTimestamp(),
-          'unreadCount': 0,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      }
-
+      final conversationId = await ref
+          .read(messageRepositoryProvider)
+          .getOrCreateConversation(
+            currentUserId: currentUserId,
+            currentUserName: currentUserName,
+            otherUserId: contactId,
+            otherUserName: contactName,
+          );
       state = AsyncData(conversationId);
       return conversationId;
     } catch (e, st) {

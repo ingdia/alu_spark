@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/app/router/app_router.dart';
+import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/core/providers/repository_providers.dart';
-import 'package:alu_spark/features/auth/presentation/widgets/auth_widgets.dart';
+import 'package:alu_spark/core/widgets/glassmorphism_container.dart';
+import 'package:alu_spark/core/providers/role_provider.dart';
 import 'package:alu_spark/features/student_profile/domain/entities/student.dart';
+import 'package:alu_spark/shared/enums/user_role.dart';
 
 class StudentOnboardingScreen extends ConsumerStatefulWidget {
   const StudentOnboardingScreen({super.key});
@@ -20,10 +22,17 @@ class _StudentOnboardingScreenState extends ConsumerState<StudentOnboardingScree
   final _pageController = PageController();
   int _step = 0;
 
+  // University is fixed for this ALU-only platform.
+  static const _university = 'African Leadership University';
+
+  static const _programmes = [
+    'Global Challenges',
+    'Business & Entrepreneurship',
+    'Software Engineering',
+  ];
+
   final _step1Key = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _universityController = TextEditingController();
-  final _majorController = TextEditingController();
+  String _programme = _programmes[0];
   final _bioController = TextEditingController();
 
   final _skillInputController = TextEditingController();
@@ -34,9 +43,6 @@ class _StudentOnboardingScreenState extends ConsumerState<StudentOnboardingScree
   @override
   void dispose() {
     _pageController.dispose();
-    _nameController.dispose();
-    _universityController.dispose();
-    _majorController.dispose();
     _bioController.dispose();
     _skillInputController.dispose();
     super.dispose();
@@ -70,19 +76,20 @@ class _StudentOnboardingScreenState extends ConsumerState<StudentOnboardingScree
   Future<void> _submit() async {
     setState(() => _isLoading = true);
     try {
-      final uid = fb.FirebaseAuth.instance.currentUser?.uid;
-      final email = fb.FirebaseAuth.instance.currentUser?.email ?? '';
+      final fbUser = fb.FirebaseAuth.instance.currentUser;
+      final uid = fbUser?.uid;
+      final email = fbUser?.email ?? '';
+      final fullName = fbUser?.displayName ?? '';
       if (uid == null) return;
 
-      // Force-refresh token so Firestore rules see email_verified = true
-      await fb.FirebaseAuth.instance.currentUser?.getIdToken(true);
+      await fbUser?.getIdToken(true);
 
       final student = Student(
         id: uid,
-        fullName: _nameController.text.trim(),
+        fullName: fullName,
         email: email,
-        university: _universityController.text.trim(),
-        major: _majorController.text.trim(),
+        university: _university,
+        major: _programme,
         bio: _bioController.text.trim(),
         skills: _skills,
         education: [],
@@ -91,16 +98,15 @@ class _StudentOnboardingScreenState extends ConsumerState<StudentOnboardingScree
 
       await ref.read(studentRepositoryProvider).saveStudent(student);
 
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
-        'profileComplete': true,
-        'fullName': student.fullName,
-      });
+      // Delegate the users doc update to the repository — no direct Firestore.
+      await ref.read(authRepositoryProvider).completeStudentProfile();
 
-      if (mounted) {
-        _showToast('Profile created! Welcome to ALU Spark 🎉');
-        await Future.delayed(const Duration(milliseconds: 800));
-        Navigator.of(context).pushNamedAndRemoveUntil(RouteNames.home, (_) => false);
-      }
+      ref.read(roleProvider.notifier).setRole(UserRole.student);
+
+      if (!mounted) return;
+      _showToast('Profile created! Welcome to ALU Spark 🎉');
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (mounted) Navigator.of(context).pushNamedAndRemoveUntil(RouteNames.home, (_) => false);
     } catch (e) {
       if (mounted) {
         _showToast(e.toString().replaceFirst('Exception: ', ''), isError: true);
@@ -160,7 +166,7 @@ class _StudentOnboardingScreenState extends ConsumerState<StudentOnboardingScree
   }
 
   Widget _buildHeader() {
-    final titles = ['Basic Info', 'Your Skills', 'Almost Done!'];
+    final titles = ['Your Programme', 'Your Skills', 'Almost Done!'];
     final subtitles = [
       'Tell us about yourself',
       'What are you good at?',
@@ -235,25 +241,61 @@ class _StudentOnboardingScreenState extends ConsumerState<StudentOnboardingScree
         key: _step1Key,
         child: Column(
           children: [
-            AuthTextField(
-              controller: _nameController,
-              hintText: 'Full Name *',
-              prefixIcon: Icons.person_outline,
-              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+            // University is pre-filled and read-only — this is an ALU-only platform.
+            GlassmorphicContainer(
+              blur: 10,
+              borderRadius: 12,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.account_balance_outlined,
+                      color: AppColors.darkRed, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('University',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.textSecondary, fontSize: 11)),
+                        const SizedBox(height: 2),
+                        Text(_university,
+                            style: AppTextStyles.bodyMedium
+                                .copyWith(color: AppColors.white)),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.lock_outline,
+                      color: AppColors.textSecondary, size: 14),
+                ],
+              ),
             ),
             const SizedBox(height: 14),
-            AuthTextField(
-              controller: _universityController,
-              hintText: 'University *',
-              prefixIcon: Icons.account_balance_outlined,
-              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-            ),
-            const SizedBox(height: 14),
-            AuthTextField(
-              controller: _majorController,
-              hintText: 'Major / Program *',
-              prefixIcon: Icons.school_outlined,
-              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+            // ALU Programme dropdown
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.glassWhite,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.borderGlass),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: DropdownButtonFormField<String>(
+                initialValue: _programme,
+                dropdownColor: AppColors.darkBlueLight,
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
+                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.school_outlined, color: AppColors.darkRed, size: 20),
+                  labelText: 'ALU Programme *',
+                  labelStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary, fontSize: 12),
+                  border: InputBorder.none,
+                ),
+                items: _programmes.map((p) => DropdownMenuItem(
+                  value: p,
+                  child: Text(p, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white)),
+                )).toList(),
+                onChanged: (v) => setState(() => _programme = v!),
+              ),
             ),
             const SizedBox(height: 14),
             _buildBioField(),
@@ -378,11 +420,9 @@ class _StudentOnboardingScreenState extends ConsumerState<StudentOnboardingScree
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _reviewRow(Icons.person_outline, 'Name', _nameController.text),
+                _reviewRow(Icons.account_balance_outlined, 'University', _university),
                 const SizedBox(height: 12),
-                _reviewRow(Icons.account_balance_outlined, 'University', _universityController.text),
-                const SizedBox(height: 12),
-                _reviewRow(Icons.school_outlined, 'Major', _majorController.text),
+                _reviewRow(Icons.school_outlined, 'Programme', _programme),
                 if (_bioController.text.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   _reviewRow(Icons.info_outline, 'Bio', _bioController.text),

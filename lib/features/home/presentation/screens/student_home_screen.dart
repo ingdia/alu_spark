@@ -11,6 +11,7 @@ import 'package:alu_spark/features/opportunities/presentation/providers/opportun
 import 'package:alu_spark/features/opportunities/domain/entities/opportunity.dart';
 import 'package:alu_spark/features/applications/presentation/providers/application_provider.dart';
 import 'package:alu_spark/features/bookmarks/presentation/providers/bookmark_provider.dart';
+import 'package:alu_spark/features/student_profile/presentation/providers/student_profile_provider.dart';
 import 'package:alu_spark/shared/enums/application_status.dart';
 
 class StudentHomeScreen extends ConsumerWidget {
@@ -24,6 +25,7 @@ class StudentHomeScreen extends ConsumerWidget {
     final currentUser = ref.watch(authStateProvider).value;
     final userId = fb.FirebaseAuth.instance.currentUser?.uid ?? '';
     final displayName = currentUser?.fullName ?? 'Student';
+    final profileAsync = ref.watch(studentProfileProvider(userId));
 
     return Scaffold(
       backgroundColor: AppColors.darkBlue,
@@ -42,7 +44,7 @@ class StudentHomeScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 24),
-                      _buildHeader(context, displayName),
+                      _buildHeader(context, displayName, profileAsync.value?.profileImageUrl),
                       const SizedBox(height: 20),
                       _buildSearchBar(context),
                       const SizedBox(height: 24),
@@ -67,7 +69,7 @@ class StudentHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, String displayName) {
+  Widget _buildHeader(BuildContext context, String displayName, String? profileImageUrl) {
     return Row(
       children: [
         Stack(
@@ -80,14 +82,19 @@ class StudentHomeScreen extends ConsumerWidget {
                 border: Border.all(color: AppColors.darkRed, width: 2),
               ),
               child: ClipOval(
-                child: Image.asset(
-                  'assets/images/avatar_alex.jpg',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    color: AppColors.darkBlueLight,
-                    child: const Icon(Icons.person, color: AppColors.white, size: 24),
-                  ),
-                ),
+                child: profileImageUrl != null
+                    ? Image.network(
+                        profileImageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          color: AppColors.darkBlueLight,
+                          child: const Icon(Icons.person, color: AppColors.white, size: 24),
+                        ),
+                      )
+                    : Container(
+                        color: AppColors.darkBlueLight,
+                        child: const Icon(Icons.person, color: AppColors.white, size: 24),
+                      ),
               ),
             ),
             Positioned(

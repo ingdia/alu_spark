@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:alu_spark/app/theme/app_colors.dart';
 import 'package:alu_spark/app/theme/app_text_styles.dart';
 import 'package:alu_spark/app/router/app_router.dart';
+import 'package:alu_spark/core/providers/firebase_providers.dart';
+import 'package:alu_spark/core/providers/role_provider.dart';
+import 'package:alu_spark/shared/enums/user_role.dart';
 
 class RoleSelectionScreen extends ConsumerStatefulWidget {
   const RoleSelectionScreen({super.key});
@@ -14,7 +15,7 @@ class RoleSelectionScreen extends ConsumerStatefulWidget {
 }
 
 class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
-  String? _selected; // 'student' or 'startup'
+  String? _selected; // 'student' or 'founder'
   bool _isLoading = false;
 
   Future<void> _continue() async {
@@ -22,23 +23,17 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final uid = fb.FirebaseAuth.instance.currentUser?.uid;
-      if (uid == null) return;
+      // Delegate the Firestore role write to the repository.
+      await ref.read(authRepositoryProvider).setUserRole(_selected!);
 
       if (_selected == 'student') {
-        await FirebaseFirestore.instance.collection('users').doc(uid).update({
-          'role': 'student',
-        });
         if (mounted) {
+          ref.read(roleProvider.notifier).setRole(UserRole.student);
           Navigator.of(context).pushNamedAndRemoveUntil(RouteNames.studentOnboarding, (_) => false);
         }
       } else {
-        // Mark role as founder but profileComplete stays false until startup onboarding done
-        await FirebaseFirestore.instance.collection('users').doc(uid).update({
-          'role': 'founder',
-          'profileComplete': false,
-        });
         if (mounted) {
+          ref.read(roleProvider.notifier).setRole(UserRole.founder);
           Navigator.of(context).pushNamedAndRemoveUntil(
             RouteNames.startupOnboarding,
             (_) => false,
@@ -48,7 +43,13 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.darkRed),
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: AppColors.darkRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
         );
       }
     } finally {
@@ -83,11 +84,11 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
               ),
               const SizedBox(height: 16),
               _RoleCard(
-                selected: _selected == 'startup',
+                selected: _selected == 'founder',
                 icon: Icons.rocket_launch_outlined,
                 title: 'Startup / Founder',
                 description: 'I run a startup and want to post opportunities and find talent.',
-                onTap: () => setState(() => _selected = 'startup'),
+                onTap: () => setState(() => _selected = 'founder'),
               ),
               const Spacer(),
               SizedBox(

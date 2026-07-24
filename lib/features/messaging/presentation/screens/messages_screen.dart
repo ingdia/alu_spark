@@ -10,12 +10,36 @@ import 'package:alu_spark/core/widgets/error_state_widget.dart';
 import 'package:alu_spark/core/providers/firebase_providers.dart';
 import 'package:alu_spark/features/messaging/presentation/providers/message_provider.dart';
 import 'package:alu_spark/features/messaging/domain/entities/conversation.dart';
+import 'package:alu_spark/features/messaging/presentation/screens/rooms_screen.dart';
 
-class MessagesScreen extends ConsumerWidget {
+class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MessagesScreen> createState() => _MessagesScreenState();
+}
+
+class _MessagesScreenState extends ConsumerState<MessagesScreen>
+    with SingleTickerProviderStateMixin {
+  final _searchCtrl = TextEditingController();
+  TabController? _tabCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabCtrl = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _tabCtrl?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_tabCtrl == null) return const SizedBox.shrink();
     final authState = ref.watch(authStateProvider);
 
     return Scaffold(
@@ -25,21 +49,49 @@ class MessagesScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Text('Messages', style: AppTextStyles.headingLarge.copyWith(color: AppColors.white)),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+              child: Text('Messages',
+                  style: AppTextStyles.headingLarge
+                      .copyWith(color: AppColors.white)),
             ),
+            const SizedBox(height: 12),
+            // Tab bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                'Connect with founders and students',
-                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary, fontSize: 13),
+              child: Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.glassWhite,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderGlass),
+                ),
+                child: TabBar(
+                  controller: _tabCtrl!,
+                  indicator: BoxDecoration(
+                    color: AppColors.darkRed,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  dividerColor: Colors.transparent,
+                  labelStyle: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w600, fontSize: 13),
+                  unselectedLabelStyle:
+                      AppTextStyles.bodyMedium.copyWith(fontSize: 13),
+                  labelColor: AppColors.white,
+                  unselectedLabelColor: AppColors.textSecondary,
+                  tabs: const [
+                    Tab(text: 'Direct Messages'),
+                    Tab(text: 'Rooms'),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Expanded(
               child: authState.when(
                 loading: () => const LoadingWidget(),
-                error: (error, _) => ErrorStateWidget(message: error.toString()),
+                error: (error, _) =>
+                    ErrorStateWidget(message: error.toString()),
                 data: (user) {
                   if (user == null) {
                     return const EmptyStateWidget(
@@ -48,16 +100,19 @@ class MessagesScreen extends ConsumerWidget {
                       description: 'Please log in to view your messages.',
                     );
                   }
-
-                  final conversationsAsync = ref.watch(conversationsProvider(user.id));
-
-                  return conversationsAsync.when(
-                    loading: () => const LoadingWidget(message: 'Loading conversations...'),
-                    error: (error, _) => ErrorStateWidget(
-                      message: error.toString(),
-                      onRetry: () => ref.invalidate(conversationsProvider(user.id)),
-                    ),
-                    data: (conversations) => _buildContent(context, conversations, ref),
+                  return TabBarView(
+                    controller: _tabCtrl!,
+                    children: [
+                      // ── DMs tab ──
+                      Column(
+                        children: [
+                          _buildSearchBar(),
+                          Expanded(child: _buildBody(context, user.id)),
+                        ],
+                      ),
+                      // ── Rooms tab ──
+                      const RoomsScreen(),
+                    ],
                   );
                 },
               ),
@@ -68,56 +123,125 @@ class MessagesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, List<Conversation> conversations, WidgetRef ref) {
-    final authState = ref.read(authStateProvider);
-    final currentUserId = authState.value?.id ?? '';
-    
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      child: GlassmorphicContainer(
+        blur: 10,
+        borderRadius: 14,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: TextField(
+          controller: _searchCtrl,
+          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
+          decoration: InputDecoration(
+            hintText: 'Search conversations…',
+            hintStyle: AppTextStyles.bodyMedium
+                .copyWith(color: AppColors.textSecondary),
+            border: InputBorder.none,
+            icon: const Icon(Icons.search,
+                color: AppColors.textSecondary, size: 20),
+            suffixIcon: _searchCtrl.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear,
+                        color: AppColors.textSecondary, size: 18),
+                    onPressed: () {
+                      _searchCtrl.clear();
+                      ref.read(conversationSearchQueryProvider.notifier).set('');
+                      setState(() {});
+                    },
+                  )
+                : null,
+          ),
+          onChanged: (v) {
+            ref.read(conversationSearchQueryProvider.notifier).set(v);
+            setState(() {});
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, String userId) {
+    final filtered = ref.watch(filteredConversationsProvider(userId));
+    return filtered.when(
+      loading: () =>
+          const LoadingWidget(message: 'Loading conversations...'),
+      error: (error, _) => ErrorStateWidget(
+        message: error.toString(),
+        onRetry: () => ref.invalidate(conversationsProvider(userId)),
+      ),
+      data: (conversations) =>
+          _buildContent(context, conversations, userId),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, List<Conversation> conversations,
+      String currentUserId) {
     if (conversations.isEmpty) {
-      return Center(
-        child: Padding(
+      final query = ref.read(conversationSearchQueryProvider);
+      if (query.isNotEmpty) {
+        return EmptyStateWidget(
+          icon: Icons.search_off,
+          title: 'No Results',
+          description: 'No conversations match "$query".',
+        );
+      }
+      return LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
           padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 88,
-                height: 88,
-                decoration: BoxDecoration(
-                  color: AppColors.darkRed.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: const Icon(Icons.chat_bubble_rounded, size: 40, color: AppColors.darkRed),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'No Conversations Yet',
-                style: AppTextStyles.headingMedium.copyWith(color: AppColors.white, fontSize: 20),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Start a conversation by applying to an opportunity or connecting with a founder.',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              GestureDetector(
-                onTap: () => Navigator.of(context).pushNamed(RouteNames.discover),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                  decoration: BoxDecoration(
-                    gradient: AppColors.redGradient,
-                    borderRadius: BorderRadius.circular(14),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 88,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      color: AppColors.darkRed.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: const Icon(Icons.chat_bubble_rounded,
+                        size: 40, color: AppColors.darkRed),
                   ),
-                  child: Text(
-                    'Browse Opportunities',
-                    style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white, fontWeight: FontWeight.w600),
+                  const SizedBox(height: 24),
+                  Text(
+                    'No Conversations Yet',
+                    style: AppTextStyles.headingMedium
+                        .copyWith(color: AppColors.white, fontSize: 20),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Start a conversation by applying to an opportunity or connecting with a founder.',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  GestureDetector(
+                    onTap: () =>
+                        Navigator.of(context).pushNamed(RouteNames.discover),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: AppColors.redGradient,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        'Browse Opportunities',
+                        style: AppTextStyles.bodyLarge.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       );
@@ -126,23 +250,29 @@ class MessagesScreen extends ConsumerWidget {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       itemCount: conversations.length,
-      itemBuilder: (context, index) => _buildConversationCard(context, conversations[index], currentUserId),
+      itemBuilder: (context, index) =>
+          _buildConversationCard(context, conversations[index], currentUserId),
     );
   }
 
-  Widget _buildConversationCard(BuildContext context, Conversation conv, String currentUserId) {
-    final String contactName = conv.participantNames.values.firstWhere(
-      (name) => name != 'Me',
-      orElse: () => conv.participantNames.values.isNotEmpty ? conv.participantNames.values.first : 'Unknown',
-    );
-    final bool hasUnread = conv.getUnreadCount(currentUserId) > 0;
+  Widget _buildConversationCard(
+      BuildContext context, Conversation conv, String currentUserId) {
+    final otherId = conv.otherParticipantId(currentUserId);
+    final contactName = conv.getParticipantName(otherId);
+    final hasUnread = conv.getUnreadCount(currentUserId) > 0;
+    final isTyping = conv.typingUsers.contains(otherId);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GestureDetector(
         onTap: () {
           Navigator.of(context).pushNamed(
             RouteNames.chatDetail,
-            arguments: {'contactId': conv.participantIds.firstWhere((id) => id != currentUserId, orElse: () => conv.participantIds.first), 'contactName': contactName},
+            arguments: {
+              'conversationId': conv.id,
+              'contactId': otherId,
+              'contactName': contactName,
+            },
           );
         },
         child: GlassmorphicContainer(
@@ -155,8 +285,11 @@ class MessagesScreen extends ConsumerWidget {
                 radius: 24,
                 backgroundColor: AppColors.darkRed.withValues(alpha: 0.2),
                 child: Text(
-                  contactName.isNotEmpty ? contactName[0].toUpperCase() : '?',
-                  style: AppTextStyles.headingMedium.copyWith(color: AppColors.darkRed),
+                  contactName.isNotEmpty
+                      ? contactName[0].toUpperCase()
+                      : '?',
+                  style: AppTextStyles.headingMedium
+                      .copyWith(color: AppColors.darkRed),
                 ),
               ),
               const SizedBox(width: 16),
@@ -167,31 +300,51 @@ class MessagesScreen extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                      Expanded(
-                        child: Text(
-                          contactName,
-                          style: AppTextStyles.bodyLarge.copyWith(
-                            color: AppColors.white,
-                            fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
+                        Expanded(
+                          child: Text(
+                            contactName,
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              color: AppColors.white,
+                              fontWeight: hasUnread
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
                         Text(
-                          'Now',
+                          _fmtTime(conv.lastMessageTime),
                           style: AppTextStyles.bodyMedium.copyWith(
-                            color: hasUnread ? AppColors.darkRed : AppColors.textSecondary,
+                            color: hasUnread
+                                ? AppColors.darkRed
+                                : AppColors.textSecondary,
                             fontSize: 11,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    if (conv.opportunityTitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(conv.opportunityTitle!,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.darkRedLight,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis),
+                    ],
+                    const SizedBox(height: 4),
                     Text(
-                      conv.lastMessage,
+                      isTyping ? 'typing…' : conv.lastMessage,
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: hasUnread ? AppColors.white : AppColors.textSecondary,
+                        color: isTyping
+                            ? const Color(0xFF34D399)
+                            : hasUnread
+                                ? AppColors.white
+                                : AppColors.textSecondary,
                         fontSize: 13,
+                        fontStyle: isTyping
+                            ? FontStyle.italic
+                            : FontStyle.normal,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -199,26 +352,40 @@ class MessagesScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-                      if (hasUnread)
-                        Container(
-                          margin: const EdgeInsets.only(left: 8),
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            color: AppColors.darkRed,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text(
-                            '${conv.getUnreadCount(currentUserId)}',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.white,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
+              if (hasUnread)
+                Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.all(6),
+                  decoration: const BoxDecoration(
+                    color: AppColors.darkRed,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '${conv.getUnreadCount(currentUserId)}',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.white,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  String _fmtTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m';
+    if (diff.inDays < 1) {
+      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    }
+    if (diff.inDays < 7) {
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return days[dt.weekday - 1];
+    }
+    return '${dt.day}/${dt.month}';
   }
 }

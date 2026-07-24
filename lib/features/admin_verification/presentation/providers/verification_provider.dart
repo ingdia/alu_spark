@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final pendingStartupsProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
@@ -30,17 +31,33 @@ class VerificationNotifier extends Notifier<AsyncValue<void>> {
   @override
   AsyncValue<void> build() => const AsyncData(null);
 
+  Future<void> _refreshToken() async {
+    final user = fb_auth.FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await user.reload();
+      await fb_auth.FirebaseAuth.instance.currentUser?.getIdToken(true);
+    }
+  }
+
   Future<void> approveStartup(String startupId) async {
     state = const AsyncLoading();
     try {
+      await _refreshToken();
       final batch = FirebaseFirestore.instance.batch();
       batch.update(
         FirebaseFirestore.instance.collection('startups').doc(startupId),
-        {'status': 'approved'},
+        {
+          'status': 'approved',
+          'reviewedAt': FieldValue.serverTimestamp(),
+        },
       );
       batch.update(
         FirebaseFirestore.instance.collection('users').doc(startupId),
-        {'isApproved': true, 'startupProfileStatus': 'approved'},
+        {
+          'role': 'founder',
+          'isApproved': true,
+          'startupProfileStatus': 'approved',
+        },
       );
       await batch.commit();
       state = const AsyncData(null);
@@ -49,17 +66,26 @@ class VerificationNotifier extends Notifier<AsyncValue<void>> {
     }
   }
 
-  Future<void> rejectStartup(String startupId) async {
+  Future<void> rejectStartup(String startupId, {String? reason}) async {
     state = const AsyncLoading();
     try {
+      await _refreshToken();
       final batch = FirebaseFirestore.instance.batch();
       batch.update(
         FirebaseFirestore.instance.collection('startups').doc(startupId),
-        {'status': 'rejected'},
+        {
+          'status': 'rejected',
+          if (reason != null && reason.isNotEmpty) 'rejectionReason': reason,
+          'reviewedAt': FieldValue.serverTimestamp(),
+        },
       );
       batch.update(
         FirebaseFirestore.instance.collection('users').doc(startupId),
-        {'isApproved': false, 'startupProfileStatus': 'rejected'},
+        {
+          'isApproved': false,
+          'startupProfileStatus': 'rejected',
+          if (reason != null && reason.isNotEmpty) 'rejectionReason': reason,
+        },
       );
       await batch.commit();
       state = const AsyncData(null);

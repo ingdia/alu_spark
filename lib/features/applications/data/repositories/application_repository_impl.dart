@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:alu_spark/features/applications/domain/entities/application.dart';
 import 'package:alu_spark/features/applications/domain/repositories/application_repository.dart';
 import 'package:alu_spark/shared/enums/application_status.dart';
@@ -14,10 +15,9 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
   ApplicationRepositoryImpl({
     FirebaseFirestore? firestore,
     NotificationService? notifications,
-    MessageRepository? messaging,
+    this._messaging,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _notifications = notifications ?? NotificationService(),
-        _messaging = messaging;
+        _notifications = notifications ?? NotificationService();
 
   Application _fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
@@ -75,9 +75,21 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
     return map;
   }
 
+  /// Force-refreshes the Firebase ID token so Firestore rules always see
+  /// an up-to-date email_verified claim. Called before every write.
+  Future<void> _refreshToken() async {
+    final user = fb_auth.FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await user.reload();
+      await fb_auth.FirebaseAuth.instance.currentUser?.getIdToken(true);
+    }
+  }
+
   @override
   Future<void> submitApplication(Application application) async {
-    final ref = _firestore.collection(_collection).doc();
+    await _refreshToken();
+    final ref = _firestore.collection(_collection)
+        .doc('${application.studentId}_${application.opportunityId}');
     final now = DateTime.now();
     final data = _toMap(application);
     data['createdAt'] = Timestamp.fromDate(now);
@@ -117,6 +129,15 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
   }
 
   @override
+  Stream<Application?> getApplicationById(String applicationId) {
+    return _firestore
+        .collection(_collection)
+        .doc(applicationId)
+        .snapshots()
+        .map((s) => s.exists ? _fromDoc(s) : null);
+  }
+
+  @override
   Stream<Application?> getApplicationForOpportunity(
       String studentId, String opportunityId) {
     return _firestore
@@ -130,6 +151,7 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
 
   @override
   Future<void> withdrawApplication(String applicationId) async {
+    await _refreshToken();
     await _validateTransition(applicationId, ApplicationStatus.withdrawn);
     final doc = await _firestore.collection(_collection).doc(applicationId).get();
     final data = doc.data() as Map<String, dynamic>;
@@ -151,6 +173,7 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
   @override
   Future<void> updateApplicationStatus(
       String applicationId, ApplicationStatus next) async {
+    await _refreshToken();
     await _validateTransition(applicationId, next);
     final doc = await _firestore.collection(_collection).doc(applicationId).get();
     final data = doc.data() as Map<String, dynamic>;
@@ -215,6 +238,7 @@ class ApplicationRepositoryImpl implements ApplicationRepository {
     String? meetingLink,
     String? interviewNotes,
   }) async {
+    await _refreshToken();
     // Read current doc to determine if this is a new interview or an update.
     final doc =
         await _firestore.collection(_collection).doc(applicationId).get();

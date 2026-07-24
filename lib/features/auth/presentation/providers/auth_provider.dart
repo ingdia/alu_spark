@@ -59,9 +59,7 @@ class AuthNotifier extends Notifier<AuthState> {
     required String teamSize,
     required List<Map<String, String>> founders,
     required String description,
-    String? proofFilePath,
-    List<int>? proofFileBytes,
-    required String proofFileName,
+    required String proofDocumentUrl,
   }) async {
     state = state.copyWith(status: AuthStatus.loading);
     try {
@@ -75,17 +73,14 @@ class AuthNotifier extends Notifier<AuthState> {
             teamSize: teamSize,
             founders: founders,
             description: description,
-            proofFilePath: proofFilePath,
-            proofFileBytes: proofFileBytes,
-            proofFileName: proofFileName,
+            proofDocumentUrl: proofDocumentUrl,
           );
       state = state.copyWith(
         status: AuthStatus.success,
         successMessage: 'Startup profile submitted for review!',
       );
     } catch (e, st) {
-      debugPrint('registerStartup ERROR: $e');
-      debugPrint('STACKTRACE: $st');
+      debugPrint('registerStartup ERROR: $e\nSTACKTRACE: $st');
       state = state.copyWith(
         status: AuthStatus.error,
         errorMessage: e.toString().replaceFirst('Exception: ', ''),

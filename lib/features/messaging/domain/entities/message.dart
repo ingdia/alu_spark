@@ -9,6 +9,7 @@ class Message {
   final DateTime createdAt;
   final bool isRead;
   final List<String> readBy;
+  final List<String> deliveredTo;
   final MessageType type;
   final String? attachmentUrl;
   final String? attachmentName;
@@ -22,14 +23,19 @@ class Message {
     required this.createdAt,
     this.isRead = false,
     this.readBy = const [],
+    this.deliveredTo = const [],
     this.type = MessageType.text,
     this.attachmentUrl,
     this.attachmentName,
   });
 
+  /// Sent = in Firestore. Delivered = recipient device received it. Read = recipient opened chat.
+  bool get isDelivered => deliveredTo.isNotEmpty;
+
   Message copyWith({
     bool? isRead,
     List<String>? readBy,
+    List<String>? deliveredTo,
   }) =>
       Message(
         id: id,
@@ -40,6 +46,7 @@ class Message {
         createdAt: createdAt,
         isRead: isRead ?? this.isRead,
         readBy: readBy ?? this.readBy,
+        deliveredTo: deliveredTo ?? this.deliveredTo,
         type: type,
         attachmentUrl: attachmentUrl,
         attachmentName: attachmentName,
